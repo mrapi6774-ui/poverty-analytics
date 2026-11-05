@@ -47,6 +47,11 @@
                 <i class="bi bi-diagram-3"></i> Korelasi (Scatter Plot)
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('data-management') ? 'active' : '' }}" href="{{ route('data-management') }}">
+                <i class="bi bi-database-gear"></i> Kelola Data (CRUD)
+            </a>
+        </li>
     </ul>
 </div>
 
