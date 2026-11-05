@@ -15,7 +15,7 @@ return new class extends Migration
         $table->id();
         $table->string('code')->unique(); // Kode BPS Wilayah (misal: 1900, 1901)
         $table->string('name');           // Nama wilayah (misal: Kab. Bangka, Prov. Kep. Bangka Belitung)
-        $table->enum('type', ['province', 'regency'])->default('regency'); // Tingkat wilayah
+        $table->enum('type', ['national','province', 'regency'])->default('regency'); // Tingkat wilayah
         $table->timestamps();
     });
 }

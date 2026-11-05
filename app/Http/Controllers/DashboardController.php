@@ -13,56 +13,111 @@ class DashboardController extends Controller
 {
     // 1. Halaman Trend Waktu (Time Series)
     public function timeSeries(Request $request)
-    {
-        $selectedRegency   = $request->get('regency_id', 1);
-        $selectedIndicator = $request->get('indicator_id', 1);
+{
+    $selectedRegency   = $request->get('regency_id', 3); // Default: Kab. Bangka
+    $selectedIndicator = $request->get('indicator_id', 1); // Default: P0
 
-        $regencies  = Regency::all();
-        $sectors    = Sector::with('indicators')->get();
+    $regencies  = Regency::where('type', 'regency')->get();
+    $sectors    = Sector::with('indicators')->get();
+    $years      = range(2025, 2035);
 
-        $timeSeriesData = RegionalIndicatorData::where('regency_id', $selectedRegency)
-            ->where('indicator_id', $selectedIndicator)
-            ->whereBetween('year', [2025, 2035])
-            ->orderBy('year', 'asc')
-            ->get();
+    // 1. Data Trend Waktu Kabupaten Terpilih
+    $kabData = RegionalIndicatorData::where('regency_id', $selectedRegency)
+        ->where('indicator_id', $selectedIndicator)
+        ->whereBetween('year', [2025, 2035])
+        ->orderBy('year', 'asc')
+        ->pluck('value', 'year');
 
-        $apbdData = ApbdExpenditure::where('regency_id', $selectedRegency)
-            ->selectRaw('year, SUM(total_expense) as total_budget')
-            ->groupBy('year')
-            ->orderBy('year', 'asc')
-            ->get();
+    // 2. Data Trend Waktu Provinsi
+    $provReg = Regency::where('type', 'province')->first();
+    $provData = RegionalIndicatorData::where('regency_id', $provReg ? $provReg->id : null)
+        ->where('indicator_id', $selectedIndicator)
+        ->whereBetween('year', [2025, 2035])
+        ->orderBy('year', 'asc')
+        ->pluck('value', 'year');
 
-        $indicatorObj = Indicator::find($selectedIndicator);
+    // 3. Data Trend Waktu Nasional
+    $natReg = Regency::where('type', 'national')->first();
+    $natData = RegionalIndicatorData::where('regency_id', $natReg ? $natReg->id : null)
+        ->where('indicator_id', $selectedIndicator)
+        ->whereBetween('year', [2025, 2035])
+        ->orderBy('year', 'asc')
+        ->pluck('value', 'year');
 
-        return view('pages.time-series', compact(
-            'regencies', 'sectors', 'selectedRegency',
-            'selectedIndicator', 'timeSeriesData', 'apbdData', 'indicatorObj'
-        ));
-    }
+    // APBD Trend Waktu Kabupaten Terpilih
+    $apbdData = ApbdExpenditure::where('regency_id', $selectedRegency)
+        ->selectRaw('year, SUM(total_expense) as total_budget')
+        ->groupBy('year')
+        ->orderBy('year', 'asc')
+        ->get();
+
+    $indicatorObj  = Indicator::find($selectedIndicator);
+    $selectedRegObj = Regency::find($selectedRegency);
+
+    return view('pages.time-series', compact(
+        'regencies', 'sectors', 'selectedRegency', 'selectedIndicator',
+        'years', 'kabData', 'provData', 'natData', 'apbdData', 'indicatorObj', 'selectedRegObj'
+    ));
+}
 
     // 2. Halaman Analisis Antar Wilayah (Cross Section)
     public function crossSection(Request $request)
-    {
-        $selectedIndicator = $request->get('indicator_id', 1);
-        $selectedYear      = $request->get('year', 2026);
+{
+    $selectedIndicator = $request->get('indicator_id', 1);
+    $selectedYear      = $request->get('year', 2026);
 
-        $sectors    = Sector::with('indicators')->get();
-        $years      = range(2025, 2035);
+    $sectors    = Sector::with('indicators')->get();
+    $years      = range(2025, 2035);
 
-        $indicatorObj = Indicator::find($selectedIndicator);
-        $sortOrder    = ($indicatorObj && $indicatorObj->direction === 'positive') ? 'desc' : 'asc';
+    $indicatorObj = Indicator::find($selectedIndicator);
+    $sortOrder    = ($indicatorObj && $indicatorObj->direction === 'positive') ? 'desc' : 'asc';
 
-        $crossSectionData = RegionalIndicatorData::with('regency')
-            ->where('indicator_id', $selectedIndicator)
-            ->where('year', $selectedYear)
-            ->orderBy('value', $sortOrder)
-            ->get();
+    // 1. Data 7 Kabupaten/Kota pada Tahun Terpilih (Grafik Batang 1)
+    $crossSectionData = RegionalIndicatorData::with('regency')
+        ->whereHas('regency', function($q) {
+            $q->where('type', 'regency');
+        })
+        ->where('indicator_id', $selectedIndicator)
+        ->where('year', $selectedYear)
+        ->orderBy('value', $sortOrder)
+        ->get();
 
-        return view('pages.cross-section', compact(
-            'sectors', 'years', 'selectedIndicator',
-            'selectedYear', 'crossSectionData', 'indicatorObj'
-        ));
-    }
+    // 2. Data Angka Acuan Provinsi & Nasional pada Tahun Terpilih (Badge Info)
+    $provData = RegionalIndicatorData::whereHas('regency', fn($q) => $q->where('type', 'province'))
+        ->where('indicator_id', $selectedIndicator)
+        ->where('year', $selectedYear)
+        ->first();
+
+    $natData = RegionalIndicatorData::whereHas('regency', fn($q) => $q->where('type', 'national'))
+        ->where('indicator_id', $selectedIndicator)
+        ->where('year', $selectedYear)
+        ->first();
+
+    $provValue = $provData ? (float) $provData->value : 0;
+    $natValue  = $natData ? (float) $natData->value : 0;
+
+    // 3. Data Kurva Tren Waktu Provinsi & Nasional (2025-2035) untuk Grafik 2
+    $provReg = Regency::where('type', 'province')->first();
+    $natReg  = Regency::where('type', 'national')->first();
+
+    $provTrend = RegionalIndicatorData::where('regency_id', $provReg ? $provReg->id : null)
+        ->where('indicator_id', $selectedIndicator)
+        ->whereBetween('year', [2025, 2035])
+        ->orderBy('year', 'asc')
+        ->pluck('value', 'year');
+
+    $natTrend = RegionalIndicatorData::where('regency_id', $natReg ? $natReg->id : null)
+        ->where('indicator_id', $selectedIndicator)
+        ->whereBetween('year', [2025, 2035])
+        ->orderBy('year', 'asc')
+        ->pluck('value', 'year');
+
+    return view('pages.cross-section', compact(
+        'sectors', 'years', 'selectedIndicator',
+        'selectedYear', 'crossSectionData', 'indicatorObj',
+        'provValue', 'natValue', 'provTrend', 'natTrend'
+    ));
+}
 
     // 3. Halaman Analisis APBD & Efektivitas
     public function apbdAnalysis(Request $request)

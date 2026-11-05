@@ -56,22 +56,61 @@
 
 @section('scripts')
 <script>
-    const timeSeriesData = JSON.parse('{!! json_encode($timeSeriesData) !!}');
-    const apbdData       = JSON.parse('{!! json_encode($apbdData) !!}');
-
-    const years = timeSeriesData.map(item => item.year);
-    const indicatorValues = timeSeriesData.map(item => item.value);
-    const apbdValues = apbdData.map(item => item.total_budget);
+    const years = JSON.parse('{!! json_encode($years) !!}');
+    const kabValues  = JSON.parse('{!! json_encode(array_values($kabData->toArray())) !!}');
+    const provValues = JSON.parse('{!! json_encode(array_values($provData->toArray())) !!}');
+    const natValues  = JSON.parse('{!! json_encode(array_values($natData->toArray())) !!}');
+    const apbdData   = JSON.parse('{!! json_encode($apbdData) !!}');
 
     new Chart(document.getElementById('indicatorChart'), {
         type: 'line',
-        data: { labels: years, datasets: [{ label: 'Nilai Indikator', data: indicatorValues, borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', fill: true, tension: 0.3 }] },
-        options: { responsive: true }
+        data: {
+            labels: years,
+            datasets: [
+                {
+                    label: '{{ $selectedRegObj->name ?? "Kabupaten Terpilih" }}',
+                    data: kabValues,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.3
+                },
+                {
+                    label: 'Prov. Kep. Bangka Belitung',
+                    data: provValues,
+                    borderColor: '#ffc107',
+                    borderDash: [6, 6],
+                    borderWidth: 2,
+                    tension: 0.3
+                },
+                {
+                    label: 'Rata-Rata Nasional',
+                    data: natValues,
+                    borderColor: '#dc3545',
+                    borderDash: [3, 3],
+                    borderWidth: 2,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true, position: 'bottom' }
+            }
+        }
     });
 
     new Chart(document.getElementById('apbdChart'), {
         type: 'bar',
-        data: { labels: years, datasets: [{ label: 'Total APBD (Juta Rp)', data: apbdValues, backgroundColor: '#198754' }] },
+        data: {
+            labels: years,
+            datasets: [{
+                label: 'Total APBD (Juta Rp)',
+                data: apbdData.map(item => item.total_budget),
+                backgroundColor: '#198754'
+            }]
+        },
         options: { responsive: true }
     });
 </script>

@@ -63,6 +63,7 @@ class MasterDataSeeder extends Seeder
 
         // 3. Data Wilayah (Provinsi & 7 Kab/Kota Bangka Belitung)
         $regencies = [
+            ['code' => '0000', 'name' => 'Nasional', 'type' => 'national'],
             ['code' => '1900', 'name' => 'Prov. Kepulauan Bangka Belitung', 'type' => 'province'],
             ['code' => '1901', 'name' => 'Kab. Bangka', 'type' => 'regency'],
             ['code' => '1902', 'name' => 'Kab. Belitung', 'type' => 'regency'],
