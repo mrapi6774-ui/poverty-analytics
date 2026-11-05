@@ -77,8 +77,47 @@
                 </div>
             </div>
 
-            <!-- Tabel Daftar Data Indikator -->
+            <!-- Tabel & Form Filter Data Indikator -->
             <div class="col-lg-8">
+                <!-- Card Filter Pencarian Indikator -->
+                <div class="card shadow-sm border-0 mb-3 bg-light">
+                    <div class="card-body p-3">
+                        <form method="GET" action="{{ route('data-management') }}" class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label form-label-sm fw-semibold m-0">Cari Wilayah:</label>
+                                <select name="search_regency" class="form-select form-select-sm">
+                                    <option value="">-- Semua Wilayah --</option>
+                                    @foreach($regencies as $reg)
+                                        <option value="{{ $reg->id }}" {{ request('search_regency') == $reg->id ? 'selected' : '' }}>{{ $reg->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label form-label-sm fw-semibold m-0">Cari Indikator:</label>
+                                <select name="search_indicator" class="form-select form-select-sm">
+                                    <option value="">-- Semua Indikator --</option>
+                                    @foreach($indicators as $ind)
+                                        <option value="{{ $ind->id }}" {{ request('search_indicator') == $ind->id ? 'selected' : '' }}>{{ $ind->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label form-label-sm fw-semibold m-0">Tahun:</label>
+                                <select name="search_year" class="form-select form-select-sm">
+                                    <option value="">-- Semua --</option>
+                                    @foreach($years as $y)
+                                        <option value="{{ $y }}" {{ request('search_year') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex gap-1">
+                                <button type="submit" class="btn btn-sm btn-primary w-100 fw-bold"><i class="bi bi-search"></i> Cari</button>
+                                <a href="{{ route('data-management') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
                         <span>📋 Daftar Data Indikator Tersimpan</span>
@@ -97,7 +136,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($indicatorDataList as $row)
+                                    @forelse($indicatorDataList as $row)
                                         <tr>
                                             <td class="fw-bold">{{ $row->year }}</td>
                                             <td>{{ $row->regency->name }}</td>
@@ -113,7 +152,11 @@
                                                 </form>
                                             </td>
                                         </tr>
-                                    @endforeach
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">Data tidak ditemukan sesuai filter pencarian.</td>
+                                        </tr>
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>
@@ -183,8 +226,47 @@
                 </div>
             </div>
 
-            <!-- Tabel Daftar Data APBD -->
+            <!-- Tabel & Form Filter Data APBD -->
             <div class="col-lg-8">
+                <!-- Card Filter Pencarian APBD -->
+                <div class="card shadow-sm border-0 mb-3 bg-light">
+                    <div class="card-body p-3">
+                        <form method="GET" action="{{ route('data-management') }}" class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label form-label-sm fw-semibold m-0">Cari Daerah:</label>
+                                <select name="search_apbd_regency" class="form-select form-select-sm">
+                                    <option value="">-- Semua Daerah --</option>
+                                    @foreach($regencies as $reg)
+                                        <option value="{{ $reg->id }}" {{ request('search_apbd_regency') == $reg->id ? 'selected' : '' }}>{{ $reg->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label form-label-sm fw-semibold m-0">Cari Sektor Belanja:</label>
+                                <select name="search_sector" class="form-select form-select-sm">
+                                    <option value="">-- Semua Sektor --</option>
+                                    @foreach($sectors as $sec)
+                                        <option value="{{ $sec->id }}" {{ request('search_sector') == $sec->id ? 'selected' : '' }}>{{ $sec->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label form-label-sm fw-semibold m-0">Tahun:</label>
+                                <select name="search_apbd_year" class="form-select form-select-sm">
+                                    <option value="">-- Semua --</option>
+                                    @foreach($years as $y)
+                                        <option value="{{ $y }}" {{ request('search_apbd_year') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex gap-1">
+                                <button type="submit" class="btn btn-sm btn-success w-100 fw-bold"><i class="bi bi-search"></i> Cari</button>
+                                <a href="{{ route('data-management') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
                         <span>📋 Daftar Realisasi APBD Tersimpan</span>
@@ -203,7 +285,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($apbdDataList as $row)
+                                    @forelse($apbdDataList as $row)
                                         <tr>
                                             <td class="fw-bold">{{ $row->year }}</td>
                                             <td>{{ $row->regency->name }}</td>
@@ -219,7 +301,11 @@
                                                 </form>
                                             </td>
                                         </tr>
-                                    @endforeach
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">Data anggaran tidak ditemukan sesuai filter pencarian.</td>
+                                        </tr>
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>
@@ -233,6 +319,5 @@
     </div>
 </div>
 
-<!-- Bootstrap 5 JS Bundle untuk memfungsikan Nav Tabs -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 @endsection

@@ -12,54 +12,55 @@ use App\Models\ApbdExpenditure;
 class DataManagementController extends Controller
 {
     // Halaman Utama Pengelolaan Data
-    public function index(Request $request)
-    {
-        $regencies  = Regency::all();
-        $indicators = Indicator::all();
-        $sectors    = Sector::all();
-        $years      = range(2025, 2035);
+    // Halaman Utama Pengelolaan Data (Dengan Filter & Pencarian)
+public function index(Request $request)
+{
+    $regencies  = Regency::all();
+    $indicators = Indicator::all();
+    $sectors    = Sector::all();
+    $years      = range(2025, 2035);
 
-        // Data Indikator Daerah (Daftar & Pagination)
-        $indicatorDataList = RegionalIndicatorData::with(['regency', 'indicator'])
-            ->orderBy('year', 'desc')
-            ->orderBy('regency_id', 'asc')
-            ->paginate(10, ['*'], 'indicator_page');
+    // 1. Query Filter Data Indikator
+    $indicatorQuery = RegionalIndicatorData::with(['regency', 'indicator']);
 
-        // Data APBD Sektor (Daftar & Pagination)
-        $apbdDataList = ApbdExpenditure::with(['regency', 'sector'])
-            ->orderBy('year', 'desc')
-            ->orderBy('regency_id', 'asc')
-            ->paginate(10, ['*'], 'apbd_page');
-
-        return view('pages.data-management', compact(
-            'regencies', 'indicators', 'sectors', 'years', 
-            'indicatorDataList', 'apbdDataList'
-        ));
+    if ($request->filled('search_regency')) {
+        $indicatorQuery->where('regency_id', $request->search_regency);
+    }
+    if ($request->filled('search_indicator')) {
+        $indicatorQuery->where('indicator_id', $request->search_indicator);
+    }
+    if ($request->filled('search_year')) {
+        $indicatorQuery->where('year', $request->search_year);
     }
 
-    // 1. Simpan / Update Data Indikator Manual
-    public function storeIndicatorData(Request $request)
-    {
-        $request->validate([
-            'regency_id'   => 'required|exists:master_regencies,id',
-            'indicator_id' => 'required|exists:master_indicators,id',
-            'year'         => 'required|integer|min:2025|max:2035',
-            'value'        => 'required|numeric',
-        ]);
+    $indicatorDataList = $indicatorQuery->orderBy('year', 'desc')
+        ->orderBy('regency_id', 'asc')
+        ->paginate(10, ['*'], 'indicator_page')
+        ->withQueryString(); // Mempertahankan parameter filter saat berpindah halaman pagination
 
-        RegionalIndicatorData::updateOrCreate(
-            [
-                'regency_id'   => $request->regency_id,
-                'indicator_id' => $request->indicator_id,
-                'year'         => $request->year,
-            ],
-            [
-                'value'        => $request->value,
-            ]
-        );
+    // 2. Query Filter Data APBD
+    $apbdQuery = ApbdExpenditure::with(['regency', 'sector']);
 
-        return redirect()->back()->with('success_indicator', 'Data Indikator berhasil disimpan/diperbarui!');
+    if ($request->filled('search_apbd_regency')) {
+        $apbdQuery->where('regency_id', $request->search_apbd_regency);
     }
+    if ($request->filled('search_sector')) {
+        $apbdQuery->where('sector_id', $request->search_sector);
+    }
+    if ($request->filled('search_apbd_year')) {
+        $apbdQuery->where('year', $request->search_apbd_year);
+    }
+
+    $apbdDataList = $apbdQuery->orderBy('year', 'desc')
+        ->orderBy('regency_id', 'asc')
+        ->paginate(10, ['*'], 'apbd_page')
+        ->withQueryString();
+
+    return view('pages.data-management', compact(
+        'regencies', 'indicators', 'sectors', 'years', 
+        'indicatorDataList', 'apbdDataList'
+    ));
+}
 
     // 2. Hapus Data Indikator
     public function destroyIndicatorData($id)
