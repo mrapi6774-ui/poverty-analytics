@@ -193,42 +193,52 @@ class DashboardController extends Controller
 
     // 4. Halaman Analisis Korelasi (Scatter Plot)
     public function scatterPlot(Request $request)
-    {
-        $selectedYear       = $request->get('year', 2026);
-        $selectedIndicatorX = $request->get('indicator_x', 6);
-        $selectedIndicatorY = $request->get('indicator_y', 1);
+{
+    $selectedIndX = $request->get('indicator_x', 2); // Default: Rata-rata Lama Sekolah / Indikator 2
+    $selectedIndY = $request->get('indicator_y', 1); // Default: Persentase Penduduk Miskin (P0) / Indikator 1
+    $selectedYear = $request->get('year', 2026);
 
-        $indicators = Indicator::all();
-        $years      = range(2025, 2035);
-        $regencies  = Regency::all();
+    $sectors    = Sector::with('indicators')->get();
+    $indicators = Indicator::all();
+    $years      = range(2025, 2035);
 
-        $dataX = RegionalIndicatorData::where('indicator_id', $selectedIndicatorX)
+    $indXObj = Indicator::find($selectedIndX);
+    $indYObj = Indicator::find($selectedIndY);
+
+    // Ambil data 7 Kabupaten/Kota untuk Variabel X & Y
+    $regencies = Regency::where('type', 'regency')->get();
+
+    $scatterPoints = [];
+    $tableData     = [];
+
+    foreach ($regencies as $reg) {
+        $valX = RegionalIndicatorData::where('regency_id', $reg->id)
+            ->where('indicator_id', $selectedIndX)
             ->where('year', $selectedYear)
-            ->get()
-            ->keyBy('regency_id');
+            ->value('value') ?? 0;
 
-        $dataY = RegionalIndicatorData::where('indicator_id', $selectedIndicatorY)
+        $valY = RegionalIndicatorData::where('regency_id', $reg->id)
+            ->where('indicator_id', $selectedIndY)
             ->where('year', $selectedYear)
-            ->get()
-            ->keyBy('regency_id');
+            ->value('value') ?? 0;
 
-        $scatterPoints = [];
-        foreach ($regencies as $reg) {
-            if ($reg->type === 'regency' && isset($dataX[$reg->id]) && isset($dataY[$reg->id])) {
-                $scatterPoints[] = [
-                    'regency' => $reg->name,
-                    'x'       => (float) $dataX[$reg->id]->value,
-                    'y'       => (float) $dataY[$reg->id]->value,
-                ];
-            }
-        }
+        $scatterPoints[] = [
+            'x'     => (float) $valX,
+            'y'     => (float) $valY,
+            'label' => $reg->name,
+        ];
 
-        $indicatorXObj = Indicator::find($selectedIndicatorX);
-        $indicatorYObj = Indicator::find($selectedIndicatorY);
-
-        return view('pages.scatter-plot', compact(
-            'indicators', 'years', 'selectedYear', 'selectedIndicatorX',
-            'selectedIndicatorY', 'scatterPoints', 'indicatorXObj', 'indicatorYObj'
-        ));
+        $tableData[] = [
+            'regency_name' => $reg->name,
+            'val_x'        => $valX,
+            'val_y'        => $valY,
+        ];
     }
+
+    return view('pages.scatter-plot', compact(
+        'sectors', 'indicators', 'years',
+        'selectedIndX', 'selectedIndY', 'selectedYear',
+        'indXObj', 'indYObj', 'scatterPoints', 'tableData'
+    ));
+}
 }
