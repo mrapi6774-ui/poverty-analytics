@@ -58,7 +58,12 @@
 <!-- Header Atas -->
 <div class="topbar shadow-sm">
     <h5 class="m-0 fw-bold text-dark">@yield('page-title', 'Dashboard')</h5>
-    <span class="badge bg-primary fs-6">Provinsi Kepulauan Bangka Belitung</span>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ route('report.pdf') }}" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
+            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Cetak Laporan (PDF)
+        </a>
+        <span class="badge bg-primary fs-6">Provinsi Kepulauan Bangka Belitung</span>
+    </div>
 </div>
 
 <!-- Area Konten Utama -->

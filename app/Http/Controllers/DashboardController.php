@@ -241,4 +241,39 @@ class DashboardController extends Controller
         'indXObj', 'indYObj', 'scatterPoints', 'tableData'
     ));
 }
+
+    // Halaman Laporan Eksekutif & Cetak PDF
+public function reportPDF(Request $request)
+{
+    $selectedRegency = $request->get('regency_id', 3); // Default Kab. Bangka
+    $selectedYear    = $request->get('year', 2026);
+
+    $regencies = Regency::whereIn('type', ['regency', 'province'])->get();
+    $years     = range(2025, 2035);
+    $selectedRegObj = Regency::find($selectedRegency);
+
+    // 1. Data Indikator Utama Wilayah (Kemiskinan P0, HLS, AHH, TPT)
+    $indicatorSummary = RegionalIndicatorData::with('indicator')
+        ->where('regency_id', $selectedRegency)
+        ->where('year', $selectedYear)
+        ->get();
+
+    // 2. Data Ringkasan Belanja APBD Sektoral
+    $apbdSummary = ApbdExpenditure::with('sector')
+        ->where('regency_id', $selectedRegency)
+        ->where('year', $selectedYear)
+        ->get();
+
+    // 3. Tren 5 Tahun Terakhir P0 Kemiskinan
+    $p0Trend = RegionalIndicatorData::where('regency_id', $selectedRegency)
+        ->where('indicator_id', 1)
+        ->whereBetween('year', [$selectedYear - 4, $selectedYear])
+        ->orderBy('year', 'asc')
+        ->pluck('value', 'year');
+
+    return view('pages.report-pdf', compact(
+        'regencies', 'years', 'selectedRegency', 'selectedYear',
+        'selectedRegObj', 'indicatorSummary', 'apbdSummary', 'p0Trend'
+    ));
+}
 }

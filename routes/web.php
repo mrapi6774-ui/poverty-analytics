@@ -19,3 +19,6 @@ Route::delete('/data-management/indicator/{id}', [DataManagementController::clas
 // Route Action CRUD APBD
 Route::post('/data-management/apbd', [DataManagementController::class, 'storeApbdData'])->name('data-management.store-apbd');
 Route::delete('/data-management/apbd/{id}', [DataManagementController::class, 'destroyApbdData'])->name('data-management.destroy-apbd');
+
+// Route Cetak Laporan Executive Summary (PDF)
+Route::get('/report/pdf', [DashboardController::class, 'reportPDF'])->name('report.pdf');
