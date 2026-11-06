@@ -63,6 +63,32 @@
             <i class="bi bi-file-earmark-pdf-fill me-1"></i> Cetak Laporan (PDF)
         </a>
         <span class="badge bg-primary fs-6">Provinsi Kepulauan Bangka Belitung</span>
+        
+        @auth
+            <!-- JIKA BERHASIL LOGIN (ADMIN) -->
+            <div class="dropdown ms-2">
+                <button class="btn btn-dark btn-sm dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-person-circle me-1"></i> {{ Auth::user()->name }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                    <li><span class="dropdown-item-text text-muted small">Role: Administrator</span></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="dropdown-item text-danger fw-bold">
+                                <i class="bi bi-box-arrow-right me-2"></i> Keluar (Logout)
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        @else
+            <!-- JIKA GUEST (PUBLIK) -->
+            <a href="{{ route('login') }}" class="btn btn-sm btn-outline-primary fw-bold ms-2">
+                <i class="bi bi-shield-lock-fill me-1"></i> Login Admin
+            </a>
+        @endauth
     </div>
 </div>
 
