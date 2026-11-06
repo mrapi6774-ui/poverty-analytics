@@ -121,89 +121,75 @@ class DashboardController extends Controller
 
     // 3. Halaman Analisis APBD & Efektivitas
     public function apbdAnalysis(Request $request)
-    {
-        $selectedRegency   = $request->get('regency_id', 1);
-        $selectedIndicator = $request->get('indicator_id', 1);
+{
+    $selectedRegency = $request->get('regency_id', 3); // Default: Kab. Bangka
+    $selectedYear    = $request->get('year', 2026);
 
-        $regencies  = Regency::all();
-        $sectors    = Sector::with('indicators')->get();
-        $years      = range(2025, 2035);
+    $regencies = Regency::whereIn('type', ['regency', 'province'])->get();
+    $sectors   = Sector::all();
+    $years     = range(2025, 2035);
 
-        $indicatorObj = Indicator::find($selectedIndicator);
-        $sectorIdOfSelectedIndicator = $indicatorObj ? $indicatorObj->sector_id : 1;
+    $selectedRegObj = Regency::find($selectedRegency);
 
-        // Data Stacked Bar Chart Sektor
-        $apbdSectorBreakdown = ApbdExpenditure::with('sector')
-            ->where('regency_id', $selectedRegency)
-            ->whereBetween('year', [2025, 2035])
-            ->get()
-            ->groupBy('sector.name');
+    // 1. Data Tren Total APBD (2025–2035) untuk Wilayah Terpilih
+    $apbdTrend = ApbdExpenditure::where('regency_id', $selectedRegency)
+        ->selectRaw('year, SUM(total_expense) as total_budget')
+        ->groupBy('year')
+        ->orderBy('year', 'asc')
+        ->pluck('total_budget', 'year');
 
-        $stackedDatasets = [];
-        $colors = ['#0d6efd', '#198754', '#ffc107', '#0dcaf0', '#6f42c1'];
-        $colorIndex = 0;
+    // 2. Data Komposisi Belanja per Sektor pada Tahun Terpilih
+    $sectorComposition = ApbdExpenditure::with('sector')
+        ->where('regency_id', $selectedRegency)
+        ->where('year', $selectedYear)
+        ->get();
 
-        foreach ($apbdSectorBreakdown as $sectorName => $expenditures) {
-            $budgetByYear = $expenditures->pluck('total_expense', 'year')->toArray();
-            $dataPoints = [];
-            foreach ($years as $y) {
-                $dataPoints[] = $budgetByYear[$y] ?? 0;
-            }
-            $stackedDatasets[] = [
-                'label'           => $sectorName ?: 'Lainnya',
-                'data'            => $dataPoints,
-                'backgroundColor' => $colors[$colorIndex % count($colors)],
-            ];
-            $colorIndex++;
+    // 3. Perhitungan Analisis Efektivitas Sektor (Delta Indikator vs Delta Anggaran)
+    // Ambil data P0 (Kemiskinan) tahun ini & tahun sebelumnya
+    $p0Current = RegionalIndicatorData::where('regency_id', $selectedRegency)
+        ->where('indicator_id', 1) // ID 1: Persentase Penduduk Miskin (P0)
+        ->where('year', $selectedYear)
+        ->value('value') ?? 0;
+
+    $p0Prev = RegionalIndicatorData::where('regency_id', $selectedRegency)
+        ->where('indicator_id', 1)
+        ->where('year', $selectedYear - 1)
+        ->value('value') ?? $p0Current;
+
+    $deltaP0 = $p0Current - $p0Prev; // Perubahan angka kemiskinan
+
+    // Hitung Rasio Efektivitas per Sektor
+    $effectivenessData = [];
+    foreach ($sectorComposition as $item) {
+        $prevExpense = ApbdExpenditure::where('regency_id', $selectedRegency)
+            ->where('sector_id', $item->sector_id)
+            ->where('year', $selectedYear - 1)
+            ->value('total_expense') ?? $item->total_expense;
+
+        $deltaExpense = $item->total_expense - $prevExpense;
+
+        // Status efektivitas: Jika kemiskinan turun (deltaP0 < 0) saat anggaran naik, maka Efektif
+        $status = 'Netral';
+        if ($deltaP0 < 0 && $deltaExpense > 0) {
+            $status = 'Sangat Efektif';
+        } elseif ($deltaP0 >= 0 && $deltaExpense > 0) {
+            $status = 'Kurang Efektif';
         }
 
-        // Tabel Efektivitas
-        $timeSeriesData = RegionalIndicatorData::where('regency_id', $selectedRegency)
-            ->where('indicator_id', $selectedIndicator)
-            ->whereBetween('year', [2025, 2035])
-            ->orderBy('year', 'asc')
-            ->get();
-
-        $tsKeyByYear = $timeSeriesData->keyBy('year');
-
-        $sectorBudgetsByYear = ApbdExpenditure::where('regency_id', $selectedRegency)
-            ->where('sector_id', $sectorIdOfSelectedIndicator)
-            ->whereBetween('year', [2025, 2035])
-            ->get()
-            ->pluck('total_expense', 'year');
-
-        $effectivityTable = [];
-        for ($i = 1; $i < count($years); $i++) {
-            $prevYear = $years[$i - 1];
-            $currYear = $years[$i];
-
-            $valPrev = isset($tsKeyByYear[$prevYear]) ? $tsKeyByYear[$prevYear]->value : 0;
-            $valCurr = isset($tsKeyByYear[$currYear]) ? $tsKeyByYear[$currYear]->value : 0;
-            $deltaVal = $valCurr - $valPrev;
-
-            $budgetPrev = $sectorBudgetsByYear[$prevYear] ?? 0;
-            $budgetCurr = $sectorBudgetsByYear[$currYear] ?? 0;
-            $deltaBudget = $budgetCurr - $budgetPrev;
-
-            $ratio = ($deltaBudget != 0) ? ($deltaVal / ($deltaBudget / 10000)) : 0;
-            $isPositiveTrend = ($indicatorObj && $indicatorObj->direction === 'positive') ? ($deltaVal > 0) : ($deltaVal < 0);
-
-            $effectivityTable[] = [
-                'year'         => $currYear,
-                'val_curr'     => $valCurr,
-                'delta_val'    => $deltaVal,
-                'budget_curr'  => $budgetCurr,
-                'delta_budget' => $deltaBudget,
-                'ratio'        => round($ratio, 4),
-                'status'       => $isPositiveTrend ? 'Efektif' : 'Kurang Efektif'
-            ];
-        }
-
-        return view('pages.apbd-analysis', compact(
-            'regencies', 'sectors', 'years', 'selectedRegency',
-            'selectedIndicator', 'stackedDatasets', 'effectivityTable', 'indicatorObj'
-        ));
+        $effectivenessData[] = [
+            'sector_name'   => $item->sector->name,
+            'current_exp'   => $item->total_expense,
+            'delta_exp'     => $deltaExpense,
+            'delta_p0'      => $deltaP0,
+            'status'        => $status,
+        ];
     }
+
+    return view('pages.apbd-analysis', compact(
+        'regencies', 'sectors', 'years', 'selectedRegency', 'selectedYear',
+        'selectedRegObj', 'apbdTrend', 'sectorComposition', 'effectivenessData'
+    ));
+}
 
     // 4. Halaman Analisis Korelasi (Scatter Plot)
     public function scatterPlot(Request $request)
