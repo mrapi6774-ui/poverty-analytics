@@ -5,15 +5,20 @@
 
 @section('content')
 
-<!-- Nav Tabs -->
+@php
+    // Menentukan tab mana yang harus aktif secara otomatis
+    $activeTab = request('active_tab') ?? (request()->hasAny(['search_apbd_regency', 'search_sector', 'search_apbd_year', 'apbd_page']) ? 'apbd' : 'indicator');
+@endphp
+
+<!-- Nav Tabs Dinamis -->
 <ul class="nav nav-pills mb-4" id="dataTab" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active fw-bold px-4" id="indicator-tab" data-bs-toggle="tab" data-bs-target="#indicator-pane" type="button" role="tab">
+        <button class="nav-link {{ $activeTab == 'indicator' ? 'active' : '' }} fw-bold px-4" id="indicator-tab" data-bs-toggle="tab" data-bs-target="#indicator-pane" type="button" role="tab">
             <i class="bi bi-bar-chart-line me-2"></i> Data Indikator Makro
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link fw-bold px-4" id="apbd-tab" data-bs-toggle="tab" data-bs-target="#apbd-pane" type="button" role="tab">
+        <button class="nav-link {{ $activeTab == 'apbd' ? 'active' : '' }} fw-bold px-4" id="apbd-tab" data-bs-toggle="tab" data-bs-target="#apbd-pane" type="button" role="tab">
             <i class="bi bi-wallet2 me-2"></i> Data Anggaran APBD
         </button>
     </li>
@@ -21,7 +26,7 @@
 
 <div class="tab-content" id="dataTabContent">
     <!-- TAB 1: KELOLA INDIKATOR MAKRO -->
-    <div class="tab-pane fade show active" id="indicator-pane" role="tabpanel">
+    <div class="tab-pane fade {{ $activeTab == 'indicator' ? 'show active' : '' }}" id="indicator-pane" role="tabpanel">
         @if(session('success_indicator'))
             <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i> {{ session('success_indicator') }}
@@ -39,6 +44,8 @@
                     <div class="card-body">
                         <form action="{{ route('data-management.store-indicator') }}" method="POST">
                             @csrf
+                            <input type="hidden" name="active_tab" value="indicator">
+                            
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Wilayah (Nasional/Prov/Kab):</label>
                                 <select name="regency_id" class="form-select" required>
@@ -83,6 +90,8 @@
                 <div class="card shadow-sm border-0 mb-3 bg-light">
                     <div class="card-body p-3">
                         <form method="GET" action="{{ route('data-management') }}" class="row g-2 align-items-end">
+                            <input type="hidden" name="active_tab" value="indicator">
+                            
                             <div class="col-md-4">
                                 <label class="form-label form-label-sm fw-semibold m-0">Cari Wilayah:</label>
                                 <select name="search_regency" class="form-select form-select-sm">
@@ -112,7 +121,7 @@
                             </div>
                             <div class="col-md-2 d-flex gap-1">
                                 <button type="submit" class="btn btn-sm btn-primary w-100 fw-bold"><i class="bi bi-search"></i> Cari</button>
-                                <a href="{{ route('data-management') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
+                                <a href="{{ route('data-management', ['active_tab' => 'indicator']) }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
                             </div>
                         </form>
                     </div>
@@ -170,7 +179,7 @@
     </div>
 
     <!-- TAB 2: KELOLA ANGGARAN APBD -->
-    <div class="tab-pane fade" id="apbd-pane" role="tabpanel">
+    <div class="tab-pane fade {{ $activeTab == 'apbd' ? 'show active' : '' }}" id="apbd-pane" role="tabpanel">
         @if(session('success_apbd'))
             <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i> {{ session('success_apbd') }}
@@ -188,6 +197,8 @@
                     <div class="card-body">
                         <form action="{{ route('data-management.store-apbd') }}" method="POST">
                             @csrf
+                            <input type="hidden" name="active_tab" value="apbd">
+
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Wilayah / Daerah:</label>
                                 <select name="regency_id" class="form-select" required>
@@ -232,6 +243,8 @@
                 <div class="card shadow-sm border-0 mb-3 bg-light">
                     <div class="card-body p-3">
                         <form method="GET" action="{{ route('data-management') }}" class="row g-2 align-items-end">
+                            <input type="hidden" name="active_tab" value="apbd">
+
                             <div class="col-md-4">
                                 <label class="form-label form-label-sm fw-semibold m-0">Cari Daerah:</label>
                                 <select name="search_apbd_regency" class="form-select form-select-sm">
@@ -261,7 +274,7 @@
                             </div>
                             <div class="col-md-2 d-flex gap-1">
                                 <button type="submit" class="btn btn-sm btn-success w-100 fw-bold"><i class="bi bi-search"></i> Cari</button>
-                                <a href="{{ route('data-management') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
+                                <a href="{{ route('data-management', ['active_tab' => 'apbd']) }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
                             </div>
                         </form>
                     </div>
