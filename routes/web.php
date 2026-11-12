@@ -16,7 +16,6 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 
-// Route Logout (Dapat dipanggil saat user sudah login)
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*
@@ -26,7 +25,6 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 */
 Route::get('/', [DashboardController::class, 'timeSeries'])->name('time-series');
 Route::get('/cross-section', [DashboardController::class, 'crossSection'])->name('cross-section');
-Route::get('/apbd-analysis', [DashboardController::class, 'apbdAnalysis'])->name('apbd-analysis');
 Route::get('/scatter-plot', [DashboardController::class, 'scatterPlot'])->name('scatter-plot');
 Route::get('/report/pdf', [DashboardController::class, 'reportPDF'])->name('report.pdf');
 Route::get('/apbd-analysis', [ApbdController::class, 'index'])->name('apbd-analysis');
@@ -44,7 +42,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/data-management/indicator', [DataManagementController::class, 'storeIndicatorData'])->name('data-management.store-indicator');
     Route::delete('/data-management/indicator/{id}', [DataManagementController::class, 'destroyIndicatorData'])->name('data-management.destroy-indicator');
 
-    // Route Action CRUD APBD
+    // Route Action CRUD APBD (Total per Sektor)
     Route::post('/data-management/apbd', [DataManagementController::class, 'storeApbdData'])->name('data-management.store-apbd');
     Route::delete('/data-management/apbd/{id}', [DataManagementController::class, 'destroyApbdData'])->name('data-management.destroy-apbd');
+
+    // Route Action CRUD Rincian Program & Sub-Kegiatan APBD
+    Route::post('/data-management/program', [DataManagementController::class, 'storeProgramData'])->name('data-management.store-program');
+    Route::delete('/data-management/program/{id}', [DataManagementController::class, 'destroyProgramData'])->name('data-management.destroy-program');
 });

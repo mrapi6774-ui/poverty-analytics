@@ -138,7 +138,7 @@
 </div>
 
 <!-- BARIS 3: Tabel Analisis Efektivitas Alokasi Anggaran -->
-<div class="row g-4">
+<div class="row g-4 mb-4">
     <div class="col-12">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
@@ -154,7 +154,7 @@
                                 <th>Sektor Belanja</th>
                                 <th class="text-end">Alokasi Anggaran (Juta Rp)</th>
                                 <th class="text-end">Perubahan Anggaran vs T-1</th>
-                                <th class="text-center">Dampak Kemiskinan ($P_0$)</th>
+                                <th class="text-center">Dampak Kemiskinan (P0)</th>
                                 <th class="text-center">Status Efektivitas</th>
                             </tr>
                         </thead>
@@ -206,10 +206,146 @@
         </div>
     </div>
 </div>
+
+<!-- BARIS 4: Rincian Program & Sub-Kegiatan per Urusan (Belanja Langsung) -->
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                <span>📂 Rincian Belanja Program & Sub-Kegiatan per Urusan (Tahun {{ $selectedYear }})</span>
+                <span class="badge bg-dark">Hierarki Program (Level 1) & Kegiatan (Level 2)</span>
+            </div>
+            <div class="card-body">
+                @php
+                    // Pemetaan nama Sektor Blok 1 ke nama Urusan APBD sesuai Excel lama
+                    $urusanLabels = [
+                        'Kemiskinan Makro'           => 'Urusan Sosial (1.13)',
+                        'Pendidikan'                 => 'Urusan Pendidikan (1.01)',
+                        'Kesehatan'                  => 'Urusan Kesehatan (1.02)',
+                        'Infrastruktur & Perumahan'  => 'Urusan Infrastruktur (1.03)',
+                        'Ketenagakerjaan & Ekonomi'  => 'Urusan Pilihan (2.01)',
+                    ];
+                @endphp
+
+                <!-- Nav Tabs untuk 5 Urusan -->
+                <ul class="nav nav-pills mb-3 gap-2" id="sectorProgramTabs" role="tablist">
+                    @foreach($sectors as $idx => $sec)
+                        @php
+                            $labelUrusan = $urusanLabels[$sec->name] ?? $sec->name;
+                        @endphp
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold custom-tab-btn {{ $idx === 0 ? 'active' : '' }}"
+                                    data-target="#pane-sec-{{ $sec->id }}"
+                                    type="button">
+                                {{ $labelUrusan }}
+                                <span class="badge bg-light text-dark ms-1">
+                                    {{ isset($programsBySector[$sec->id]) ? $programsBySector[$sec->id]->count() : 0 }} Prog
+                                </span>
+                            </button>
+                        </li>
+                    @endforeach
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="sectorProgramTabsContent">
+                    @foreach($sectors as $idx => $sec)
+                        <div class="custom-tab-pane {{ $idx === 0 ? '' : 'd-none' }}"
+                             id="pane-sec-{{ $sec->id }}">
+                            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                                <table class="table table-bordered table-sm align-middle mb-0">
+                                    <thead class="table-dark sticky-top">
+                                        <tr>
+                                            <th class="text-center" style="width: 60px;">Level</th>
+                                            <th style="width: 170px;">Kode Rekening</th>
+                                            <th>Nama Program / Sub-Kegiatan</th>
+                                            <th class="text-end" style="width: 140px;">B. Pegawai</th>
+                                            <th class="text-end" style="width: 150px;">B. Barang Jasa</th>
+                                            <th class="text-end" style="width: 140px;">B. Modal</th>
+                                            <th class="text-end" style="width: 150px;">Jumlah (Juta Rp)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php
+                                            $programs = $programsBySector[$sec->id] ?? collect();
+                                        @endphp
+
+                                        @forelse($programs as $prog)
+                                            @php
+                                                $progPegawai = $prog->children->sum(fn($c) => $c->expenditures->first()->pegawai_expense ?? 0);
+                                                $progBarjas  = $prog->children->sum(fn($c) => $c->expenditures->first()->barang_jasa_expense ?? 0);
+                                                $progModal   = $prog->children->sum(fn($c) => $c->expenditures->first()->modal_expense ?? 0);
+                                                $progTotal   = $prog->children->sum(fn($c) => $c->expenditures->first()->total_expense ?? 0);
+
+                                                if ($progTotal == 0 && $prog->expenditures->isNotEmpty()) {
+                                                    $exp = $prog->expenditures->first();
+                                                    $progPegawai = $exp->pegawai_expense;
+                                                    $progBarjas  = $exp->barang_jasa_expense;
+                                                    $progModal   = $exp->modal_expense;
+                                                    $progTotal   = $exp->total_expense;
+                                                }
+                                            @endphp
+
+                                            <!-- Baris Program Utama (Level 1) -->
+                                            <tr class="table-primary fw-bold">
+                                                <td class="text-center"><span class="badge bg-primary">1</span></td>
+                                                <td class="font-monospace small">{{ $prog->code }}</td>
+                                                <td>{{ $prog->name }}</td>
+                                                <td class="text-end">{{ number_format($progPegawai, 0, ',', '.') }}</td>
+                                                <td class="text-end">{{ number_format($progBarjas, 0, ',', '.') }}</td>
+                                                <td class="text-end">{{ number_format($progModal, 0, ',', '.') }}</td>
+                                                <td class="text-end text-primary">{{ number_format($progTotal, 0, ',', '.') }}</td>
+                                            </tr>
+
+                                            <!-- Baris Sub-Kegiatan (Level 2) -->
+                                            @foreach($prog->children as $child)
+                                                @php
+                                                    $cExp = $child->expenditures->first();
+                                                @endphp
+                                                <tr>
+                                                    <td class="text-center text-muted small">2</td>
+                                                    <td class="font-monospace small text-muted ps-3">{{ $child->code }}</td>
+                                                    <td class="ps-4">{{ $child->name }}</td>
+                                                    <td class="text-end text-muted">{{ number_format($cExp->pegawai_expense ?? 0, 0, ',', '.') }}</td>
+                                                    <td class="text-end text-muted">{{ number_format($cExp->barang_jasa_expense ?? 0, 0, ',', '.') }}</td>
+                                                    <td class="text-end text-muted">{{ number_format($cExp->modal_expense ?? 0, 0, ',', '.') }}</td>
+                                                    <td class="text-end fw-semibold">{{ number_format($cExp->total_expense ?? 0, 0, ',', '.') }}</td>
+                                                </tr>
+                                            @endforeach
+                                        @empty
+                                            <tr>
+                                                <td colspan="7" class="text-center py-4 text-muted">
+                                                    Belum ada data program untuk urusan ini.
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
+    // Pengalih Tab Urusan Program (Berjalan mandiri tanpa bergantung Bootstrap JS)
+    document.querySelectorAll('.custom-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.custom-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.custom-tab-pane').forEach(p => p.classList.add('d-none'));
+
+            this.classList.add('active');
+            const targetPane = document.querySelector(this.getAttribute('data-target'));
+            if (targetPane) {
+                targetPane.classList.remove('d-none');
+            }
+        });
+    });
+
     // Data Grafik Tren APBD
     const years = JSON.parse('{!! json_encode($years) !!}');
     const apbdTrendValues = JSON.parse('{!! json_encode(array_values($apbdTrend->toArray())) !!}');

@@ -7,11 +7,27 @@
 
 @php
     // Menentukan tab mana yang harus aktif secara otomatis
-    $activeTab = request('active_tab') ?? (request()->hasAny(['search_apbd_regency', 'search_sector', 'search_apbd_year', 'apbd_page']) ? 'apbd' : 'indicator');
+    if (request('active_tab')) {
+        $activeTab = request('active_tab');
+    } elseif (request()->has('program_page')) {
+        $activeTab = 'program';
+    } elseif (request()->hasAny(['search_apbd_regency', 'search_sector', 'search_apbd_year', 'apbd_page'])) {
+        $activeTab = 'apbd';
+    } else {
+        $activeTab = 'indicator';
+    }
+
+    $urusanLabels = [
+        'Kemiskinan Makro'           => 'Urusan Sosial (1.13)',
+        'Pendidikan'                 => 'Urusan Pendidikan (1.01)',
+        'Kesehatan'                  => 'Urusan Kesehatan (1.02)',
+        'Infrastruktur & Perumahan'  => 'Urusan Infrastruktur (1.03)',
+        'Ketenagakerjaan & Ekonomi'  => 'Urusan Pilihan (2.01)',
+    ];
 @endphp
 
 <!-- Nav Tabs Dinamis -->
-<ul class="nav nav-pills mb-4" id="dataTab" role="tablist">
+<ul class="nav nav-pills mb-4 gap-2" id="dataTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link {{ $activeTab == 'indicator' ? 'active' : '' }} fw-bold px-4" id="indicator-tab" data-bs-toggle="tab" data-bs-target="#indicator-pane" type="button" role="tab">
             <i class="bi bi-bar-chart-line me-2"></i> Data Indikator Makro
@@ -19,7 +35,12 @@
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link {{ $activeTab == 'apbd' ? 'active' : '' }} fw-bold px-4" id="apbd-tab" data-bs-toggle="tab" data-bs-target="#apbd-pane" type="button" role="tab">
-            <i class="bi bi-wallet2 me-2"></i> Data Anggaran APBD
+            <i class="bi bi-wallet2 me-2"></i> Total APBD per Urusan
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {{ $activeTab == 'program' ? 'active' : '' }} fw-bold px-4" id="program-tab" data-bs-toggle="tab" data-bs-target="#program-pane" type="button" role="tab">
+            <i class="bi bi-list-nested me-2"></i> Rincian Program & Kegiatan
         </button>
     </li>
 </ul>
@@ -86,7 +107,6 @@
 
             <!-- Tabel & Form Filter Data Indikator -->
             <div class="col-lg-8">
-                <!-- Card Filter Pencarian Indikator -->
                 <div class="card shadow-sm border-0 mb-3 bg-light">
                     <div class="card-body p-3">
                         <form method="GET" action="{{ route('data-management') }}" class="row g-2 align-items-end">
@@ -178,7 +198,7 @@
         </div>
     </div>
 
-    <!-- TAB 2: KELOLA ANGGARAN APBD -->
+    <!-- TAB 2: KELOLA TOTAL ANGGARAN APBD PER URUSAN -->
     <div class="tab-pane fade {{ $activeTab == 'apbd' ? 'show active' : '' }}" id="apbd-pane" role="tabpanel">
         @if(session('success_apbd'))
             <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
@@ -192,7 +212,7 @@
             <div class="col-lg-4">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white fw-bold py-3">
-                        ➕ Input / Update Anggaran APBD
+                        ➕ Input / Update Total APBD Urusan
                     </div>
                     <div class="card-body">
                         <form action="{{ route('data-management.store-apbd') }}" method="POST">
@@ -202,7 +222,7 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Wilayah / Daerah:</label>
                                 <select name="regency_id" class="form-select" required>
-                                    @foreach($regencies as $reg)
+                                   @foreach($apbdRegencies as $reg)
                                         <option value="{{ $reg->id }}">{{ $reg->name }}</option>
                                     @endforeach
                                 </select>
@@ -212,7 +232,7 @@
                                 <label class="form-label fw-semibold">Sektor Urusan Belanja:</label>
                                 <select name="sector_id" class="form-select" required>
                                     @foreach($sectors as $sec)
-                                        <option value="{{ $sec->id }}">{{ $sec->name }}</option>
+                                        <option value="{{ $sec->id }}">{{ $urusanLabels[$sec->name] ?? $sec->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -239,7 +259,6 @@
 
             <!-- Tabel & Form Filter Data APBD -->
             <div class="col-lg-8">
-                <!-- Card Filter Pencarian APBD -->
                 <div class="card shadow-sm border-0 mb-3 bg-light">
                     <div class="card-body p-3">
                         <form method="GET" action="{{ route('data-management') }}" class="row g-2 align-items-end">
@@ -249,17 +268,17 @@
                                 <label class="form-label form-label-sm fw-semibold m-0">Cari Daerah:</label>
                                 <select name="search_apbd_regency" class="form-select form-select-sm">
                                     <option value="">-- Semua Daerah --</option>
-                                    @foreach($regencies as $reg)
+                                    @foreach($apbdRegencies as $reg)
                                         <option value="{{ $reg->id }}" {{ request('search_apbd_regency') == $reg->id ? 'selected' : '' }}>{{ $reg->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label form-label-sm fw-semibold m-0">Cari Sektor Belanja:</label>
+                                <label class="form-label form-label-sm fw-semibold m-0">Cari Urusan Belanja:</label>
                                 <select name="search_sector" class="form-select form-select-sm">
-                                    <option value="">-- Semua Sektor --</option>
+                                    <option value="">-- Semua Urusan --</option>
                                     @foreach($sectors as $sec)
-                                        <option value="{{ $sec->id }}" {{ request('search_sector') == $sec->id ? 'selected' : '' }}>{{ $sec->name }}</option>
+                                        <option value="{{ $sec->id }}" {{ request('search_sector') == $sec->id ? 'selected' : '' }}>{{ $urusanLabels[$sec->name] ?? $sec->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -282,7 +301,7 @@
 
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-                        <span>📋 Daftar Realisasi APBD Tersimpan</span>
+                        <span>📋 Daftar Realisasi APBD per Urusan</span>
                         <span class="badge bg-secondary">Total: {{ $apbdDataList->total() }} Record</span>
                     </div>
                     <div class="card-body p-0">
@@ -292,7 +311,7 @@
                                     <tr>
                                         <th>Tahun</th>
                                         <th>Wilayah</th>
-                                        <th>Sektor Belanja</th>
+                                        <th>Urusan Belanja</th>
                                         <th class="text-end">Total Anggaran</th>
                                         <th class="text-center">Aksi</th>
                                     </tr>
@@ -302,7 +321,7 @@
                                         <tr>
                                             <td class="fw-bold">{{ $row->year }}</td>
                                             <td>{{ $row->regency->name }}</td>
-                                            <td>{{ $row->sector->name }}</td>
+                                            <td>{{ $urusanLabels[$row->sector->name] ?? $row->sector->name }}</td>
                                             <td class="text-end fw-bold text-success">Rp {{ number_format($row->total_expense, 0, ',', '.') }} Jt</td>
                                             <td class="text-center">
                                                 <form action="{{ route('data-management.destroy-apbd', $row->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data anggaran ini?')">
@@ -325,6 +344,142 @@
                     </div>
                     <div class="card-footer bg-white pt-3">
                         {{ $apbdDataList->links('pagination::bootstrap-5') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: KELOLA RINCIAN PROGRAM & SUB-KEGIATAN -->
+    <div class="tab-pane fade {{ $activeTab == 'program' ? 'show active' : '' }}" id="program-pane" role="tabpanel">
+        @if(session('success_program'))
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> {{ session('success_program') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        <div class="row g-4">
+            <!-- Form Input Rincian Program -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white fw-bold py-3">
+                        ➕ Input Anggaran Sub-Kegiatan
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ route('data-management.store-program') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="active_tab" value="program">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Wilayah / Daerah:</label>
+                                <select name="regency_id" class="form-select" required>
+                                    @foreach($apbdRegencies as $reg)
+                                        <option value="{{ $reg->id }}">{{ $reg->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Pilih Sub-Kegiatan (Level 2):</label>
+                                <select name="program_id" class="form-select" required>
+                                    @foreach($subPrograms as $sub)
+                                        @php
+                                            $secLabel = $urusanLabels[$sub->sector->name ?? ''] ?? ($sub->sector->name ?? '-');
+                                        @endphp
+                                        <option value="{{ $sub->id }}">
+                                            [{{ $secLabel }}] {{ $sub->code }} - {{ $sub->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Tahun Periode:</label>
+                                <select name="year" class="form-select" required>
+                                    @foreach($years as $y)
+                                        <option value="{{ $y }}">{{ $y }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold">B. Pegawai (Juta Rp):</label>
+                                <input type="number" step="0.01" min="0" name="pegawai_expense" class="form-control" value="0" required>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold">B. Barang & Jasa (Juta Rp):</label>
+                                <input type="number" step="0.01" min="0" name="barang_jasa_expense" class="form-control" value="0" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">B. Modal (Juta Rp):</label>
+                                <input type="number" step="0.01" min="0" name="modal_expense" class="form-control" value="0" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-dark w-100 fw-bold">Simpan & Sinkronkan Anggaran</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel Rincian Program Tersimpan -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                        <span>📋 Rincian Anggaran Sub-Kegiatan Tersimpan</span>
+                        <span class="badge bg-dark">Total: {{ $programDataList->total() }} Record</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tahun</th>
+                                        <th>Wilayah</th>
+                                        <th>Kode & Sub-Kegiatan</th>
+                                        <th class="text-end">B. Pegawai</th>
+                                        <th class="text-end">B. Barjas</th>
+                                        <th class="text-end">B. Modal</th>
+                                        <th class="text-end">Jumlah</th>
+                                        <th class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($programDataList as $row)
+                                        <tr>
+                                            <td class="fw-bold">{{ $row->year }}</td>
+                                            <td>{{ $row->regency->name }}</td>
+                                            <td>
+                                                <small class="text-muted font-monospace d-block">{{ $row->program->code ?? '-' }}</small>
+                                                <span class="fw-semibold">{{ $row->program->name ?? '-' }}</span>
+                                            </td>
+                                            <td class="text-end">{{ number_format($row->pegawai_expense, 0, ',', '.') }}</td>
+                                            <td class="text-end">{{ number_format($row->barang_jasa_expense, 0, ',', '.') }}</td>
+                                            <td class="text-end">{{ number_format($row->modal_expense, 0, ',', '.') }}</td>
+                                            <td class="text-end fw-bold text-primary">Rp {{ number_format($row->total_expense, 0, ',', '.') }} Jt</td>
+                                            <td class="text-center">
+                                                <form action="{{ route('data-management.destroy-program', $row->id) }}" method="POST" onsubmit="return confirm('Hapus rincian anggaran kegiatan ini?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="8" class="text-center py-4 text-muted">Belum ada rincian anggaran sub-kegiatan yang diinput.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white pt-3">
+                        {{ $programDataList->links('pagination::bootstrap-5') }}
                     </div>
                 </div>
             </div>

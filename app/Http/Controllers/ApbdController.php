@@ -8,6 +8,7 @@ use App\Models\Sector;
 use App\Models\ApbdExpenditure;
 use App\Models\RegionalIndicatorData;
 use App\Models\Indicator;
+use App\Models\MasterProgram;
 
 class ApbdController extends Controller
 {
@@ -99,7 +100,23 @@ class ApbdController extends Controller
             ];
         }
 
-        // 6. Return ke View 'pages.apbd-analysis'
+        // 6. Data Rincian Program (Level 1) & Sub-Kegiatan (Level 2) per Sektor
+        $programsBySector = MasterProgram::with([
+            'children' => function ($query) use ($selectedRegency, $selectedYear) {
+                $query->orderBy('code')->with(['expenditures' => function ($q) use ($selectedRegency, $selectedYear) {
+                    $q->where('regency_id', $selectedRegency)->where('year', $selectedYear);
+                }]);
+            },
+            'expenditures' => function ($q) use ($selectedRegency, $selectedYear) {
+                $q->where('regency_id', $selectedRegency)->where('year', $selectedYear);
+            }
+        ])
+        ->where('level', 1)
+        ->orderBy('code')
+        ->get()
+        ->groupBy('sector_id');
+
+        // 7. Return ke View 'pages.apbd-analysis'
         return view('pages.apbd-analysis', compact(
             'regencies',
             'selectedRegency',
@@ -109,7 +126,9 @@ class ApbdController extends Controller
             'selectedRegObj',
             'apbdTrend',
             'relevanceData',
-            'effectivenessData'
+            'effectivenessData',
+            'sectors',
+            'programsBySector'
         ));
     }
 }
