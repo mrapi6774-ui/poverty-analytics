@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataManagementController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ApbdController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,7 @@ Route::get('/cross-section', [DashboardController::class, 'crossSection'])->name
 Route::get('/apbd-analysis', [DashboardController::class, 'apbdAnalysis'])->name('apbd-analysis');
 Route::get('/scatter-plot', [DashboardController::class, 'scatterPlot'])->name('scatter-plot');
 Route::get('/report/pdf', [DashboardController::class, 'reportPDF'])->name('report.pdf');
+Route::get('/apbd-analysis', [ApbdController::class, 'index'])->name('apbd-analysis');
 
 /*
 |--------------------------------------------------------------------------
