@@ -49,4 +49,8 @@ Route::middleware('auth')->group(function () {
     // Route Action CRUD Rincian Program & Sub-Kegiatan APBD
     Route::post('/data-management/program', [DataManagementController::class, 'storeProgramData'])->name('data-management.store-program');
     Route::delete('/data-management/program/{id}', [DataManagementController::class, 'destroyProgramData'])->name('data-management.destroy-program');
+
+    // Route Action CRUD Akun Ringkasan APBD (Pendapatan 4, Belanja Tidak Langsung 5.1, Pembiayaan 6)
+    Route::post('/data-management/account', [DataManagementController::class, 'storeAccountRecord'])->name('data-management.store-account');
+    Route::delete('/data-management/account/{id}', [DataManagementController::class, 'destroyAccountRecord'])->name('data-management.destroy-account');
 });

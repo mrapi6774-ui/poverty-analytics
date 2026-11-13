@@ -10,24 +10,25 @@ use App\Models\RegionalIndicatorData;
 use App\Models\ApbdExpenditure;
 use App\Models\MasterProgram;
 use App\Models\ProgramExpenditure;
+use App\Models\MasterApbdAccount;
+use App\Models\ApbdAccountRecord;
 
 class DataManagementController extends Controller
 {
     public function index(Request $request)
     {
-        // Wilayah untuk Indikator Makro (termasuk pembanding Provinsi/Nasional jika ada)
         $regencies     = Regency::all();
-        // Wilayah khusus untuk APBD & Program (hanya Kabupaten/Kota yang tampil di Analisis APBD)
         $apbdRegencies = Regency::where('type', 'regency')->get();
 
-        $indicators  = Indicator::all();
-        $sectors     = Sector::all();
-        $subPrograms = MasterProgram::with(['sector', 'parent'])
+        $indicators   = Indicator::all();
+        $sectors      = Sector::all();
+        $subPrograms  = MasterProgram::with(['sector', 'parent'])
             ->where('level', 2)
             ->orderBy('sector_id')
             ->orderBy('code')
             ->get();
-        $years       = range(2025, 2035);
+        $apbdAccounts = MasterApbdAccount::orderBy('id')->get();
+        $years        = range(2025, 2035);
 
         // 1. Query Filter Data Indikator
         $indicatorQuery = RegionalIndicatorData::with(['regency', 'indicator']);
@@ -66,7 +67,7 @@ class DataManagementController extends Controller
             ->paginate(10, ['*'], 'apbd_page')
             ->withQueryString();
 
-        // 3. Query Data Rincian Program / Sub-Kegiatan
+        // 3. Query Data Rincian Program / Sub-Kegiatan (Belanja Langsung 5.2)
         $programDataList = ProgramExpenditure::with(['regency', 'program.sector'])
             ->whereHas('regency', fn($q) => $q->where('type', 'regency'))
             ->orderBy('year', 'desc')
@@ -74,9 +75,17 @@ class DataManagementController extends Controller
             ->paginate(10, ['*'], 'program_page')
             ->withQueryString();
 
+        // 4. Query Data Akun APBD (Pendapatan 4, Belanja Tidak Langsung 5.1, Pembiayaan 6)
+        $accountRecordList = ApbdAccountRecord::with(['regency', 'account'])
+            ->whereHas('regency', fn($q) => $q->where('type', 'regency'))
+            ->orderBy('year', 'desc')
+            ->orderBy('regency_id', 'asc')
+            ->paginate(10, ['*'], 'account_page')
+            ->withQueryString();
+
         return view('pages.data-management', compact(
-            'regencies', 'apbdRegencies', 'indicators', 'sectors', 'subPrograms', 'years',
-            'indicatorDataList', 'apbdDataList', 'programDataList'
+            'regencies', 'apbdRegencies', 'indicators', 'sectors', 'subPrograms', 'apbdAccounts', 'years',
+            'indicatorDataList', 'apbdDataList', 'programDataList', 'accountRecordList'
         ));
     }
 
@@ -178,7 +187,6 @@ class DataManagementController extends Controller
             ]
         );
 
-        // Otomatis hitung ulang total belanja sektor terkait agar grafik & ringkasan APBD sinkron
         $program = MasterProgram::find($request->program_id);
         if ($program) {
             $sectorTotal = ProgramExpenditure::where('regency_id', $request->regency_id)
@@ -193,7 +201,8 @@ class DataManagementController extends Controller
                     'year'       => $request->year,
                 ],
                 [
-                    'total_expense' => $sectorTotal,
+                    'direct_expense' => $sectorTotal,
+                    'total_expense'  => $sectorTotal,
                 ]
             );
         }
@@ -212,7 +221,6 @@ class DataManagementController extends Controller
 
         $data->delete();
 
-        // Hitung ulang total sektor setelah data program dihapus
         if ($sectorId) {
             $sectorTotal = ProgramExpenditure::where('regency_id', $regencyId)
                 ->where('year', $year)
@@ -222,10 +230,48 @@ class DataManagementController extends Controller
             ApbdExpenditure::where('regency_id', $regencyId)
                 ->where('sector_id', $sectorId)
                 ->where('year', $year)
-                ->update(['total_expense' => $sectorTotal]);
+                ->update([
+                    'direct_expense' => $sectorTotal,
+                    'total_expense'  => $sectorTotal,
+                ]);
         }
 
         return redirect()->route('data-management', ['active_tab' => 'program'])
             ->with('success_program', 'Data Rincian Program berhasil dihapus!');
+    }
+
+    // Simpan / Update Akun Pendapatan (4), Belanja Tidak Langsung (5.1), & Pembiayaan (6)
+    public function storeAccountRecord(Request $request)
+    {
+        $request->validate([
+            'regency_id' => 'required|exists:master_regencies,id',
+            'account_id' => 'required|exists:master_apbd_accounts,id',
+            'year'       => 'required|integer|min:2025|max:2035',
+            'amount'     => 'required|numeric|min:0',
+        ]);
+
+        ApbdAccountRecord::updateOrCreate(
+            [
+                'regency_id' => $request->regency_id,
+                'account_id' => $request->account_id,
+                'year'       => $request->year,
+            ],
+            [
+                'amount' => $request->amount,
+            ]
+        );
+
+        return redirect()->route('data-management', ['active_tab' => 'account'])
+            ->with('success_account', 'Data Akun Ringkasan APBD berhasil disimpan/diperbarui!');
+    }
+
+    // Hapus Data Akun Ringkasan APBD
+    public function destroyAccountRecord($id)
+    {
+        $data = ApbdAccountRecord::findOrFail($id);
+        $data->delete();
+
+        return redirect()->route('data-management', ['active_tab' => 'account'])
+            ->with('success_account', 'Data Akun Ringkasan APBD berhasil dihapus!');
     }
 }

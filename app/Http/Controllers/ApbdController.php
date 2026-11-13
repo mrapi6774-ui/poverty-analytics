@@ -9,6 +9,8 @@ use App\Models\ApbdExpenditure;
 use App\Models\RegionalIndicatorData;
 use App\Models\Indicator;
 use App\Models\MasterProgram;
+use App\Models\MasterApbdAccount;
+use App\Models\ApbdAccountRecord;
 
 class ApbdController extends Controller
 {
@@ -29,7 +31,7 @@ class ApbdController extends Controller
             ->orderBy('year')
             ->pluck('total_expense', 'year');
 
-        // 3. Data Komposisi Belanja per Sektor
+        // 3. Data Komposisi Belanja Langsung per Sektor (5.2)
         $sectorComposition = ApbdExpenditure::with('sector')
             ->where('regency_id', $selectedRegency)
             ->where('year', $selectedYear)
@@ -73,7 +75,6 @@ class ApbdController extends Controller
 
             $deltaExp = $item->total_expense - $prevExp;
 
-            // Perubahan Kemiskinan Makro (P0)
             $p0Ind  = Indicator::where('code', 'P0')->first();
             $currP0 = 0;
             $prevP0 = 0;
@@ -116,7 +117,25 @@ class ApbdController extends Controller
         ->get()
         ->groupBy('sector_id');
 
-        // 7. Return ke View 'pages.apbd-analysis'
+        // 7. Data Ringkasan APBD (Pendapatan 4, Belanja Tidak Langsung 5.1, Pembiayaan 6)
+        $allAccounts = MasterApbdAccount::with(['records' => function ($q) use ($selectedRegency, $selectedYear) {
+            $q->where('regency_id', $selectedRegency)->where('year', $selectedYear);
+        }])->orderBy('id')->get();
+
+        $pendapatanAccounts   = $allAccounts->where('type', 'pendapatan');
+        $belanja51Accounts    = $allAccounts->where('type', 'belanja_tidak_langsung');
+        $pembiayaanAccounts   = $allAccounts->where('type', 'pembiayaan');
+
+        $totalPendapatan      = $pendapatanAccounts->sum(fn($a) => $a->records->first()->amount ?? 0);
+        $totalBelanja51       = $belanja51Accounts->sum(fn($a) => $a->records->first()->amount ?? 0);
+        $totalBelanja52       = $sectorComposition->sum('total_expense');
+        $totalSemuaBelanja    = $totalBelanja51 + $totalBelanja52;
+        $surplusDefisit       = $totalPendapatan - $totalSemuaBelanja;
+
+        $penerimaanPembiayaan  = $pembiayaanAccounts->where('category_code', '6.1')->sum(fn($a) => $a->records->first()->amount ?? 0);
+        $pengeluaranPembiayaan = $pembiayaanAccounts->where('category_code', '6.2')->sum(fn($a) => $a->records->first()->amount ?? 0);
+        $pembiayaanNeto        = $penerimaanPembiayaan - $pengeluaranPembiayaan;
+
         return view('pages.apbd-analysis', compact(
             'regencies',
             'selectedRegency',
@@ -128,7 +147,16 @@ class ApbdController extends Controller
             'relevanceData',
             'effectivenessData',
             'sectors',
-            'programsBySector'
+            'programsBySector',
+            'pendapatanAccounts',
+            'belanja51Accounts',
+            'pembiayaanAccounts',
+            'totalPendapatan',
+            'totalBelanja51',
+            'totalBelanja52',
+            'totalSemuaBelanja',
+            'surplusDefisit',
+            'pembiayaanNeto'
         ));
     }
 }

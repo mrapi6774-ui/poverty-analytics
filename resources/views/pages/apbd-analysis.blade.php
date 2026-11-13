@@ -38,39 +38,187 @@
 <!-- Ringkasan Info APBD -->
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-lg-3">
-        <div class="card shadow-sm border-0 border-start border-4 border-primary bg-white h-100 p-3">
-            <div class="text-muted small fw-semibold text-uppercase">Total Belanja APBD ({{ $selectedYear }})</div>
-            <div class="fs-4 fw-bold text-primary mt-1">
-                Rp {{ number_format($sectorComposition->sum('total_expense'), 0, ',', '.') }} Jt
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-lg-3">
         <div class="card shadow-sm border-0 border-start border-4 border-success bg-white h-100 p-3">
-            <div class="text-muted small fw-semibold text-uppercase">Wilayah Analisis</div>
-            <div class="fs-5 fw-bold text-dark mt-1">{{ $selectedRegObj->name ?? '-' }}</div>
-        </div>
-    </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card shadow-sm border-0 border-start border-4 border-info bg-white h-100 p-3">
-            <div class="text-muted small fw-semibold text-uppercase">Jumlah Sektor Terdata</div>
-            <div class="fs-4 fw-bold text-info mt-1">{{ $sectorComposition->count() }} Sektor</div>
+            <div class="text-muted small fw-semibold text-uppercase">Total Pendapatan (4)</div>
+            <div class="fs-4 fw-bold text-success mt-1">
+                Rp {{ number_format($totalPendapatan, 0, ',', '.') }} Jt
+            </div>
+            <small class="text-muted">{{ $selectedRegObj->name ?? '-' }} ({{ $selectedYear }})</small>
         </div>
     </div>
     <div class="col-md-6 col-lg-3">
         <div class="card shadow-sm border-0 border-start border-4 border-warning bg-white h-100 p-3">
-            <div class="text-muted small fw-semibold text-uppercase">Periode Tren Waktu</div>
-            <div class="fs-4 fw-bold text-dark mt-1">2025 – 2035</div>
+            <div class="text-muted small fw-semibold text-uppercase">Belanja Tidak Langsung (5.1)</div>
+            <div class="fs-4 fw-bold text-dark mt-1">
+                Rp {{ number_format($totalBelanja51, 0, ',', '.') }} Jt
+            </div>
+            <small class="text-muted">Pegawai, Subsidi, Hibah, Bansos</small>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 border-start border-4 border-primary bg-white h-100 p-3">
+            <div class="text-muted small fw-semibold text-uppercase">Belanja Langsung (5.2)</div>
+            <div class="fs-4 fw-bold text-primary mt-1">
+                Rp {{ number_format($totalBelanja52, 0, ',', '.') }} Jt
+            </div>
+            <small class="text-muted">Total {{ $sectorComposition->count() }} Urusan Program</small>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 border-start border-4 {{ $surplusDefisit >= 0 ? 'border-info' : 'border-danger' }} bg-white h-100 p-3">
+            <div class="text-muted small fw-semibold text-uppercase">Surplus / (Defisit) APBD</div>
+            <div class="fs-4 fw-bold {{ $surplusDefisit >= 0 ? 'text-info' : 'text-danger' }} mt-1">
+                {{ $surplusDefisit >= 0 ? '' : '-' }}Rp {{ number_format(abs($surplusDefisit), 0, ',', '.') }} Jt
+            </div>
+            <small class="text-muted">Total Belanja: Rp {{ number_format($totalSemuaBelanja, 0, ',', '.') }} Jt</small>
         </div>
     </div>
 </div>
 
-<!-- BARIS 1: Grafik Tren Waktu APBD & Doughnut Komposisi Belanja -->
+<!-- BARIS 1: Tabel Ringkasan Postur APBD (Pendapatan, Belanja 5.1 & 5.2, Pembiayaan) -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                <span>📊 Ringkasan Postur APBD — {{ $selectedRegObj->name ?? '-' }} (Tahun {{ $selectedYear }})</span>
+                <span class="badge bg-dark">Format Standar Ringkasan APBD (Juta Rp)</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+                    <table class="table table-bordered table-sm align-middle mb-0">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th style="width: 110px;">Kode</th>
+                                <th>Uraian Akun APBD</th>
+                                <th class="text-end" style="width: 180px;">Nominal (Juta Rp)</th>
+                                <th class="text-end" style="width: 130px;">Proporsi (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- KELOMPOK 4: PENDAPATAN DAERAH -->
+                            <tr class="table-success fw-bold">
+                                <td>4</td>
+                                <td>PENDAPATAN DAERAH</td>
+                                <td class="text-end">{{ number_format($totalPendapatan, 2, ',', '.') }}</td>
+                                <td class="text-end">{{ $totalPendapatan > 0 ? '100,00%' : '0,00%' }}</td>
+                            </tr>
+                            @foreach($pendapatanAccounts->groupBy('category_code') as $catCode => $items)
+                                @php
+                                    $catTotal = $items->sum(fn($i) => $i->records->first()->amount ?? 0);
+                                    $catPct   = $totalPendapatan > 0 ? ($catTotal / $totalPendapatan) * 100 : 0;
+                                @endphp
+                                <tr class="table-light fw-bold">
+                                    <td>{{ $catCode }}</td>
+                                    <td>{{ $items->first()->category_name }}</td>
+                                    <td class="text-end">{{ number_format($catTotal, 2, ',', '.') }}</td>
+                                    <td class="text-end">{{ number_format($catPct, 2, ',', '.') }}%</td>
+                                </tr>
+                                @foreach($items as $acc)
+                                    @php
+                                        $val = $acc->records->first()->amount ?? 0;
+                                        $pct = $totalPendapatan > 0 ? ($val / $totalPendapatan) * 100 : 0;
+                                    @endphp
+                                    <tr>
+                                        <td class="ps-3 font-monospace small text-muted">{{ $acc->code }}</td>
+                                        <td class="ps-4">{{ $acc->name }}</td>
+                                        <td class="text-end">{{ number_format($val, 2, ',', '.') }}</td>
+                                        <td class="text-end text-muted">{{ number_format($pct, 2, ',', '.') }}%</td>
+                                    </tr>
+                                @endforeach
+                            @endforeach
+
+                            <!-- KELOMPOK 5: BELANJA DAERAH -->
+                            <tr class="table-primary fw-bold">
+                                <td>5</td>
+                                <td>BELANJA DAERAH (5.1 + 5.2)</td>
+                                <td class="text-end">{{ number_format($totalSemuaBelanja, 2, ',', '.') }}</td>
+                                <td class="text-end">{{ $totalSemuaBelanja > 0 ? '100,00%' : '0,00%' }}</td>
+                            </tr>
+                            <!-- 5.1 Belanja Tidak Langsung -->
+                            @php
+                                $pct51 = $totalSemuaBelanja > 0 ? ($totalBelanja51 / $totalSemuaBelanja) * 100 : 0;
+                            @endphp
+                            <tr class="table-light fw-bold">
+                                <td>5.1</td>
+                                <td>Belanja Tidak Langsung</td>
+                                <td class="text-end">{{ number_format($totalBelanja51, 2, ',', '.') }}</td>
+                                <td class="text-end">{{ number_format($pct51, 2, ',', '.') }}%</td>
+                            </tr>
+                            @foreach($belanja51Accounts as $acc)
+                                @php
+                                    $val = $acc->records->first()->amount ?? 0;
+                                    $pct = $totalSemuaBelanja > 0 ? ($val / $totalSemuaBelanja) * 100 : 0;
+                                @endphp
+                                <tr>
+                                    <td class="ps-3 font-monospace small text-muted">{{ $acc->code }}</td>
+                                    <td class="ps-4">{{ $acc->name }}</td>
+                                    <td class="text-end">{{ number_format($val, 2, ',', '.') }}</td>
+                                    <td class="text-end text-muted">{{ number_format($pct, 2, ',', '.') }}%</td>
+                                </tr>
+                            @endforeach
+
+                            <!-- 5.2 Belanja Langsung (Otomatis dari 5 Urusan) -->
+                            @php
+                                $pct52 = $totalSemuaBelanja > 0 ? ($totalBelanja52 / $totalSemuaBelanja) * 100 : 0;
+                            @endphp
+                            <tr class="table-light fw-bold">
+                                <td>5.2</td>
+                                <td>Belanja Langsung (Akumulasi 5 Urusan Program)</td>
+                                <td class="text-end">{{ number_format($totalBelanja52, 2, ',', '.') }}</td>
+                                <td class="text-end">{{ number_format($pct52, 2, ',', '.') }}%</td>
+                            </tr>
+
+                            <!-- SURPLUS / DEFISIT -->
+                            <tr class="{{ $surplusDefisit >= 0 ? 'table-info' : 'table-danger' }} fw-bold">
+                                <td>-</td>
+                                <td>SURPLUS / (DEFISIT) ANGGARAN</td>
+                                <td class="text-end">{{ number_format($surplusDefisit, 2, ',', '.') }}</td>
+                                <td class="text-end">-</td>
+                            </tr>
+
+                            <!-- KELOMPOK 6: PEMBIAYAAN DAERAH -->
+                            <tr class="table-secondary fw-bold">
+                                <td>6</td>
+                                <td>PEMBIAYAAN NETO (6.1 - 6.2)</td>
+                                <td class="text-end">{{ number_format($pembiayaanNeto, 2, ',', '.') }}</td>
+                                <td class="text-end">-</td>
+                            </tr>
+                            @foreach($pembiayaanAccounts->groupBy('category_code') as $catCode => $items)
+                                @php
+                                    $catTotal = $items->sum(fn($i) => $i->records->first()->amount ?? 0);
+                                @endphp
+                                <tr class="table-light fw-bold">
+                                    <td>{{ $catCode }}</td>
+                                    <td>{{ $items->first()->category_name }}</td>
+                                    <td class="text-end">{{ number_format($catTotal, 2, ',', '.') }}</td>
+                                    <td class="text-end">-</td>
+                                </tr>
+                                @foreach($items as $acc)
+                                    @php
+                                        $val = $acc->records->first()->amount ?? 0;
+                                    @endphp
+                                    <tr>
+                                        <td class="ps-3 font-monospace small text-muted">{{ $acc->code }}</td>
+                                        <td class="ps-4">{{ $acc->name }}</td>
+                                        <td class="text-end">{{ number_format($val, 2, ',', '.') }}</td>
+                                        <td class="text-end text-muted">-</td>
+                                    </tr>
+                                @endforeach
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BARIS 2: Grafik Tren Waktu APBD & Doughnut Komposisi Belanja -->
 <div class="row g-4 mb-4">
     <div class="col-lg-7">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white fw-bold py-3">
-                📈 Tren Total Belanja APBD (2025–2035)
+                📈 Tren Total Belanja Langsung APBD (2025–2035)
             </div>
             <div class="card-body">
                 <canvas id="apbdTrendChart" style="max-height: 320px;"></canvas>
@@ -89,7 +237,7 @@
     </div>
 </div>
 
-<!-- BARIS 2: Tabel Matriks Relevansi Belanja per Sektor -->
+<!-- BARIS 3: Tabel Matriks Relevansi Belanja per Sektor -->
 <div class="row g-4 mb-4">
     <div class="col-12">
         <div class="card shadow-sm border-0">
@@ -137,7 +285,7 @@
     </div>
 </div>
 
-<!-- BARIS 3: Tabel Analisis Efektivitas Alokasi Anggaran -->
+<!-- BARIS 4: Tabel Analisis Efektivitas Alokasi Anggaran -->
 <div class="row g-4 mb-4">
     <div class="col-12">
         <div class="card shadow-sm border-0">
@@ -207,7 +355,7 @@
     </div>
 </div>
 
-<!-- BARIS 4: Rincian Program & Sub-Kegiatan per Urusan (Belanja Langsung) -->
+<!-- BARIS 5: Rincian Program & Sub-Kegiatan per Urusan (Belanja Langsung 5.2) -->
 <div class="row g-4">
     <div class="col-12">
         <div class="card shadow-sm border-0">
@@ -217,7 +365,6 @@
             </div>
             <div class="card-body">
                 @php
-                    // Pemetaan nama Sektor Blok 1 ke nama Urusan APBD sesuai Excel lama
                     $urusanLabels = [
                         'Kemiskinan Makro'           => 'Urusan Sosial (1.13)',
                         'Pendidikan'                 => 'Urusan Pendidikan (1.01)',
@@ -332,7 +479,7 @@
 
 @section('scripts')
 <script>
-    // Pengalih Tab Urusan Program (Berjalan mandiri tanpa bergantung Bootstrap JS)
+    // Pengalih Tab Urusan Program
     document.querySelectorAll('.custom-tab-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.custom-tab-btn').forEach(b => b.classList.remove('active'));
@@ -350,7 +497,6 @@
     const years = JSON.parse('{!! json_encode($years) !!}');
     const apbdTrendValues = JSON.parse('{!! json_encode(array_values($apbdTrend->toArray())) !!}');
 
-    // Render Grafik Batang Tren APBD
     new Chart(document.getElementById('apbdTrendChart'), {
         type: 'bar',
         data: {
@@ -373,7 +519,6 @@
     const sectorLabels = sectorComposition.map(item => item.sector.name);
     const sectorValues = sectorComposition.map(item => item.total_expense);
 
-    // Render Doughnut Chart Komposisi Sektor
     new Chart(document.getElementById('sectorCompositionChart'), {
         type: 'doughnut',
         data: {
