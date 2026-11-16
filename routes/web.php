@@ -53,4 +53,9 @@ Route::middleware('auth')->group(function () {
     // Route Action CRUD Akun Ringkasan APBD (Pendapatan 4, Belanja Tidak Langsung 5.1, Pembiayaan 6)
     Route::post('/data-management/account', [DataManagementController::class, 'storeAccountRecord'])->name('data-management.store-account');
     Route::delete('/data-management/account/{id}', [DataManagementController::class, 'destroyAccountRecord'])->name('data-management.destroy-account');
+
+    // Route Action Unduh Template & Impor Excel (.xlsx)
+    Route::get('/data-management/excel/template', [App\Http\Controllers\ExcelController::class, 'downloadTemplate'])->name('data-management.excel.template');
+    Route::post('/data-management/excel/import', [App\Http\Controllers\ExcelController::class, 'import'])->name('data-management.excel.import');
+
 });

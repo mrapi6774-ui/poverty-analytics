@@ -27,6 +27,83 @@
     ];
 @endphp
 
+<!-- Alert Notifikasi Impor Excel & Validasi Error -->
+@if(session('success_excel'))
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-file-earmark-excel-fill me-2"></i> <strong>Berhasil!</strong> {{ session('success_excel') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Terjadi Kesalahan:</strong>
+        <ul class="mb-0 mt-1">
+            @foreach($errors->all() as $err)
+                <li>{{ $err }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+<!-- PANEL INTEGRASI EXCEL (UNDUH TEMPLATE / EXPORT & IMPOR DATA MASSAL) -->
+<div class="card shadow-sm border-0 mb-4 border-top border-4 border-success">
+    <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-file-earmark-spreadsheet-fill text-success me-2"></i> Integrasi Excel (.xlsx) — Unduh Template / Export & Impor Massal</span>
+        <span class="badge bg-success bg-opacity-10 text-success border border-success">4 Sheet Terpadu</span>
+    </div>
+    <div class="card-body bg-light">
+        <div class="row g-3 align-items-end">
+            <!-- Form 1: Unduh Template / Export Excel -->
+            <div class="col-lg-6 border-end-lg">
+                <form action="{{ route('data-management.excel.template') }}" method="GET" class="row g-2 align-items-end">
+                    <div class="col-12">
+                        <small class="text-muted fw-semibold d-block mb-1">1. Unduh Template & Data Tersimpan (.xlsx):</small>
+                    </div>
+                    <div class="col-md-5">
+                        <select name="regency_id" class="form-select form-select-sm" required>
+                            @foreach($apbdRegencies as $reg)
+                                <option value="{{ $reg->id }}">{{ $reg->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="year" class="form-select form-select-sm" required>
+                            @foreach($years as $y)
+                                <option value="{{ $y }}" {{ $y == 2026 ? 'selected' : '' }}>{{ $y }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-sm btn-outline-success w-100 fw-bold">
+                            <i class="bi bi-download me-1"></i> Unduh Excel
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Form 2: Unggah / Impor File Excel -->
+            <div class="col-lg-6">
+                <form action="{{ route('data-management.excel.import') }}" method="POST" enctype="multipart/form-data" class="row g-2 align-items-end">
+                    @csrf
+                    <div class="col-12">
+                        <small class="text-muted fw-semibold d-block mb-1">2. Unggah File Excel yang Sudah Diisi (.xlsx / .xls):</small>
+                    </div>
+                    <div class="col-md-8">
+                        <input type="file" name="excel_file" accept=".xlsx,.xls" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-sm btn-success w-100 fw-bold">
+                            <i class="bi bi-upload me-1"></i> Impor Data
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Nav Tabs Dinamis -->
 <ul class="nav nav-pills mb-4 gap-2" id="dataTab" role="tablist">
     <li class="nav-item" role="presentation">
