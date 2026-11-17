@@ -11,9 +11,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
-        .sidebar { width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0f172a; color: #fff; z-index: 100; padding-top: 1rem; }
+        .sidebar { width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0f172a; color: #fff; z-index: 100; padding-top: 1rem; overflow-y: auto; }
         .sidebar .brand { font-size: 1.25rem; font-weight: bold; padding: 0.75rem 1.5rem; color: #38bdf8; display: block; text-decoration: none; border-bottom: 1px solid #1e293b; margin-bottom: 1rem; }
-        .sidebar .nav-link { color: #94a3b8; padding: 0.75rem 1.5rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s; }
+        .sidebar .nav-section { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; padding: 0.75rem 1.5rem 0.25rem; font-weight: 700; }
+        .sidebar .nav-link { color: #94a3b8; padding: 0.7rem 1.5rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s; }
         .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #ffffff; background-color: #1e293b; border-left: 4px solid #38bdf8; }
         .main-content { margin-left: 260px; padding: 2rem; min-height: 100vh; }
         .topbar { background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 1rem 2rem; margin-left: 260px; display: flex; justify-content: space-between; align-items: center; }
@@ -26,46 +27,72 @@
     <a href="{{ route('time-series') }}" class="brand">
         <i class="bi bi-graph-up-arrow"></i> Poverty Analytics
     </a>
-    <ul class="nav flex-column">
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('time-series') ? 'active' : '' }}" href="{{ route('time-series') }}">
-                <i class="bi bi-line-chart"></i> Trend Waktu (Series)
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('cross-section') ? 'active' : '' }}" href="{{ route('cross-section') }}">
-                <i class="bi bi-bar-chart-steps"></i> Antar Wilayah (Cross)
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('apbd-analysis') ? 'active' : '' }}" href="{{ route('apbd-analysis') }}">
-                <i class="bi bi-wallet2"></i> Analisis APBD & Efektivitas
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('scatter-plot') ? 'active' : '' }}" href="{{ route('scatter-plot') }}">
-                <i class="bi bi-diagram-3"></i> Korelasi (Scatter Plot)
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('data-management') ? 'active' : '' }}" href="{{ route('data-management') }}">
-                <i class="bi bi-database-gear"></i> Kelola Data (CRUD)
-            </a>
-        </li>
-    </ul>
+
+    @if(request()->is('admin*'))
+        <!-- SIDEBAR KHUSUS PORTAL ADMIN (/admin/...) -->
+        <div class="nav-section">Panel Administrator</div>
+        <ul class="nav flex-column mb-3">
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('data-management') ? 'active' : '' }}" href="{{ route('data-management') }}">
+                    <i class="bi bi-database-gear"></i> Kelola Data & Excel
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('master-data') ? 'active' : '' }}" href="{{ route('master-data') }}">
+                    <i class="bi bi-sliders"></i> Kelola Data Master
+                </a>
+            </li>
+        </ul>
+
+        <div class="nav-section">Pratinjau Portal Publik</div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ route('time-series') }}" target="_blank">
+                    <i class="bi bi-box-arrow-up-right"></i> Buka Halaman Publik
+                </a>
+            </li>
+        </ul>
+    @else
+        <!-- SIDEBAR KHUSUS PENGUNJUNG PUBLIK -->
+        <div class="nav-section">Analisis & Visualisasi</div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('time-series') ? 'active' : '' }}" href="{{ route('time-series') }}">
+                    <i class="bi bi-line-chart"></i> Trend Waktu (Series)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('cross-section') ? 'active' : '' }}" href="{{ route('cross-section') }}">
+                    <i class="bi bi-bar-chart-steps"></i> Antar Wilayah (Cross)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('apbd-analysis') ? 'active' : '' }}" href="{{ route('apbd-analysis') }}">
+                    <i class="bi bi-wallet2"></i> Analisis APBD & Efektivitas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('scatter-plot') ? 'active' : '' }}" href="{{ route('scatter-plot') }}">
+                    <i class="bi bi-diagram-3"></i> Korelasi (Scatter Plot)
+                </a>
+            </li>
+        </ul>
+    @endif
 </div>
 
 <!-- Header Atas -->
 <div class="topbar shadow-sm">
     <h5 class="m-0 fw-bold text-dark">@yield('page-title', 'Dashboard')</h5>
     <div class="d-flex align-items-center gap-2">
-        <a href="{{ route('report.pdf') }}" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
-            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Cetak Laporan (PDF)
-        </a>
+        @if(!request()->is('admin*'))
+            <a href="{{ route('report.pdf') }}" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
+                <i class="bi bi-file-earmark-pdf-fill me-1"></i> Cetak Laporan (PDF)
+            </a>
+        @endif
+
         <span class="badge bg-primary fs-6">Provinsi Kepulauan Bangka Belitung</span>
-        
-        @auth
-            <!-- JIKA BERHASIL LOGIN (ADMIN) -->
+
+        @if(request()->is('admin*') && Auth::check())
             <div class="dropdown ms-2">
                 <button class="btn btn-dark btn-sm dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown">
                     <i class="bi bi-person-circle me-1"></i> {{ Auth::user()->name }}
@@ -83,12 +110,7 @@
                     </li>
                 </ul>
             </div>
-        @else
-            <!-- JIKA GUEST (PUBLIK) -->
-            <a href="{{ route('login') }}" class="btn btn-sm btn-outline-primary fw-bold ms-2">
-                <i class="bi bi-shield-lock-fill me-1"></i> Login Admin
-            </a>
-        @endauth
+        @endif
     </div>
 </div>
 
@@ -96,6 +118,9 @@
 <div class="main-content">
     @yield('content')
 </div>
+
+<!-- Bootstrap JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Script tambahan khusus tiap halaman -->
 @yield('scripts')

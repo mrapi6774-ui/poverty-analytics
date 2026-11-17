@@ -7,17 +7,15 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    // Tampilkan Halaman Login
     public function showLoginForm()
     {
         if (Auth::check()) {
-            return redirect()->route('time-series');
+            return redirect()->route('data-management');
         }
 
         return view('auth.login');
     }
 
-    // Proses Autentikasi Login
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -42,13 +40,12 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    // Proses Logout
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('success_logout', 'Anda telah berhasil keluar dari sistem.');
+        return redirect()->route('login')->with('success_logout', 'Anda telah berhasil keluar dari panel admin.');
     }
 }
