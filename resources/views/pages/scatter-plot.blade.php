@@ -55,19 +55,20 @@
 
 <!-- BARIS 1: Chart Scatter Plot & Tabel Koordinat -->
 <div class="row g-4">
-    <div class="col-lg-7">
+    <div class="col-lg-6">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-                <span>📍 Grafik Sebaran Korelasi 7 Kab/Kota ({{ $selectedYear }})</span>
+                <span>📍 Grafik Sebaran Korelasi Kab/Kota ({{ $selectedYear }})</span>
             </div>
             <div class="card-body">
-                <div style="height: 380px;">
+                <div style="height: 400px;">
                     <canvas id="scatterChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-5">
+
+    <div class="col-lg-6">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white fw-bold py-3">
                 📋 Rincian Koordinat Wilayah (Tahun {{ $selectedYear }})
@@ -75,21 +76,41 @@
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                        <<thead class="table-light">
                             <tr>
-                                <th>Kabupaten / Kota</th>
-                                <th class="text-end">X: {{ $indXObj->name ?? 'Var X' }}</th>
-                                <th class="text-end">Y: {{ $indYObj->name ?? 'Var Y' }}</th>
+                                <th class="ps-3 text-nowrap align-bottom fw-bold text-dark" style="width: 32%; font-size: 0.85rem;">
+                                    Kabupaten / Kota
+                                </th>
+                                <th class="text-end align-bottom" style="width: 34%;">
+                                    <span class="badge bg-primary mb-1" style="font-size: 0.72rem;">X ({{ $indXObj->unit ?? '-' }})</span>
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;" title="{{ $indXObj->name ?? 'Var X' }}">
+                                        {{ $indXObj->name ?? 'Var X' }}
+                                    </div>
+                                </th>
+                                <th class="text-end pe-3 align-bottom" style="width: 34%;">
+                                    <span class="badge bg-danger mb-1" style="font-size: 0.72rem;">Y ({{ $indYObj->unit ?? '-' }})</span>
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;" title="{{ $indYObj->name ?? 'Var Y' }}">
+                                        {{ $indYObj->name ?? 'Var Y' }}
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($tableData as $row)
+                            @forelse($tableData as $row)
                                 <tr>
-                                    <td class="fw-bold">{{ $row['regency_name'] }}</td>
-                                    <td class="text-end text-primary fw-semibold">{{ number_format($row['val_x'], 2) }} {{ $indXObj->unit ?? '' }}</td>
-                                    <td class="text-end text-danger fw-semibold">{{ number_format($row['val_y'], 2) }} {{ $indYObj->unit ?? '' }}</td>
+                                    <td class="ps-3 fw-semibold text-dark text-nowrap">{{ $row['regency_name'] }}</td>
+                                    <td class="text-end text-primary fw-bold text-nowrap" style="font-variant-numeric: tabular-nums;">
+                                        {{ number_format($row['val_x'], 2, ',', '.') }}
+                                    </td>
+                                    <td class="text-end pe-3 text-danger fw-bold text-nowrap" style="font-variant-numeric: tabular-nums;">
+                                        {{ number_format($row['val_y'], 2, ',', '.') }}
+                                    </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">Data koordinat wilayah belum tersedia.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
