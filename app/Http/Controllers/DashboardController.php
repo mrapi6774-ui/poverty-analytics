@@ -8,6 +8,7 @@ use App\Models\Indicator;
 use App\Models\Regency;
 use App\Models\RegionalIndicatorData;
 use App\Models\ApbdExpenditure;
+use App\Models\ApbdAccountRecord;
 
 class DashboardController extends Controller
 {
@@ -243,37 +244,79 @@ class DashboardController extends Controller
 }
 
     // Halaman Laporan Eksekutif & Cetak PDF
-public function reportPDF(Request $request)
-{
-    $selectedRegency = $request->get('regency_id', 3); // Default Kab. Bangka
-    $selectedYear    = $request->get('year', 2026);
+// Halaman Laporan Eksekutif & Cetak PDF
+    public function reportPDF(Request $request)
+    {
+        $selectedRegency = $request->get('regency_id', 3); // Default Kab. Bangka
+        $selectedYear    = $request->get('year', 2026);
 
-    $regencies = Regency::whereIn('type', ['regency', 'province'])->get();
-    $years     = range(2025, 2035);
-    $selectedRegObj = Regency::find($selectedRegency);
+        $regencies = Regency::whereIn('type', ['regency', 'province'])->get();
+        $years     = range(2025, 2035);
+        $selectedRegObj = Regency::find($selectedRegency);
 
-    // 1. Data Indikator Utama Wilayah (Kemiskinan P0, HLS, AHH, TPT)
-    $indicatorSummary = RegionalIndicatorData::with('indicator')
-        ->where('regency_id', $selectedRegency)
-        ->where('year', $selectedYear)
-        ->get();
+        // 1. Data Indikator Utama Wilayah
+        $indicatorSummary = RegionalIndicatorData::with('indicator')
+            ->where('regency_id', $selectedRegency)
+            ->where('year', $selectedYear)
+            ->get();
 
-    // 2. Data Ringkasan Belanja APBD Sektoral
-    $apbdSummary = ApbdExpenditure::with('sector')
-        ->where('regency_id', $selectedRegency)
-        ->where('year', $selectedYear)
-        ->get();
+        // 2. Data Ringkasan Belanja Langsung (5.2) per Urusan
+        $apbdSummary = ApbdExpenditure::with('sector')
+            ->where('regency_id', $selectedRegency)
+            ->where('year', $selectedYear)
+            ->get();
 
-    // 3. Tren 5 Tahun Terakhir P0 Kemiskinan
-    $p0Trend = RegionalIndicatorData::where('regency_id', $selectedRegency)
-        ->where('indicator_id', 1)
-        ->whereBetween('year', [$selectedYear - 4, $selectedYear])
-        ->orderBy('year', 'asc')
-        ->pluck('value', 'year');
+        // 3. Data Postur APBD (Pendapatan 4, Belanja 5.1, Pembiayaan 6)
+        $accountRecords = ApbdAccountRecord::with('account')
+            ->where('regency_id', $selectedRegency)
+            ->where('year', $selectedYear)
+            ->get();
 
-    return view('pages.report-pdf', compact(
-        'regencies', 'years', 'selectedRegency', 'selectedYear',
-        'selectedRegObj', 'indicatorSummary', 'apbdSummary', 'p0Trend'
-    ));
-}
+        $totalPendapatan = $accountRecords
+            ->filter(fn($r) => $r->account && $r->account->type === 'pendapatan')
+            ->sum('amount');
+
+        $totalBelanja51 = $accountRecords
+            ->filter(fn($r) => $r->account && $r->account->type === 'belanja_tidak_langsung')
+            ->sum('amount');
+
+        $totalBelanja52 = $apbdSummary->sum('total_expense');
+        $totalBelanja   = $totalBelanja51 + $totalBelanja52;
+        $surplusDefisit = $totalPendapatan - $totalBelanja;
+
+        $penerimaanPembiayaan = $accountRecords
+            ->filter(fn($r) => $r->account && $r->account->category_code === '6.1')
+            ->sum('amount');
+
+        $pengeluaranPembiayaan = $accountRecords
+            ->filter(fn($r) => $r->account && $r->account->category_code === '6.2')
+            ->sum('amount');
+
+        $pembiayaanNeto = $penerimaanPembiayaan - $pengeluaranPembiayaan;
+        $silpa          = $surplusDefisit + $pembiayaanNeto;
+
+        $posturApbd = [
+            'pendapatan'             => $totalPendapatan,
+            'belanja_51'             => $totalBelanja51,
+            'belanja_52'             => $totalBelanja52,
+            'total_belanja'          => $totalBelanja,
+            'surplus_defisit'        => $surplusDefisit,
+            'penerimaan_pembiayaan'  => $penerimaanPembiayaan,
+            'pengeluaran_pembiayaan' => $pengeluaranPembiayaan,
+            'pembiayaan_neto'        => $pembiayaanNeto,
+            'silpa'                  => $silpa,
+        ];
+
+        // 4. Tren 5 Tahun Terakhir P0 Kemiskinan
+        $p0Trend = RegionalIndicatorData::where('regency_id', $selectedRegency)
+            ->where('indicator_id', 1)
+            ->whereBetween('year', [$selectedYear - 4, $selectedYear])
+            ->orderBy('year', 'asc')
+            ->pluck('value', 'year');
+
+        return view('pages.report-pdf', compact(
+            'regencies', 'years', 'selectedRegency', 'selectedYear',
+            'selectedRegObj', 'indicatorSummary', 'apbdSummary', 'posturApbd', 'p0Trend'
+        ));
+    }
 }

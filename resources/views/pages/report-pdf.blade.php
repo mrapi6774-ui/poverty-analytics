@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Eksekutif Analytics Kemiskinan & APBD - {{ $selectedRegObj->name }}</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>Laporan Eksekutif Kemiskinan & APBD - {{ $selectedRegObj->name }}</title>
+    <!-- Bootstrap 5 CSS & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Chart.js -->
@@ -17,14 +17,12 @@
             color: #212529;
         }
 
-        /* Kop Surat / Header Laporan */
         .report-header {
             border-bottom: 3px double #0d6efd;
             padding-bottom: 12px;
             margin-bottom: 24px;
         }
 
-        /* Aturan Khusus Cetak / Simpan PDF */
         @media print {
             .no-print {
                 display: none !important;
@@ -49,6 +47,16 @@
 </head>
 <body class="py-4">
 
+@php
+    $urusanLabels = [
+        'Kemiskinan Makro'           => 'Urusan Sosial (1.13)',
+        'Pendidikan'                 => 'Urusan Pendidikan (1.01)',
+        'Kesehatan'                  => 'Urusan Kesehatan (1.02)',
+        'Infrastruktur & Perumahan'  => 'Urusan Infrastruktur (1.03)',
+        'Ketenagakerjaan & Ekonomi'  => 'Urusan Pilihan (2.01)',
+    ];
+@endphp
+
 <div class="container bg-white p-4 shadow-sm rounded">
 
     <!-- Tombol Aksi (Hanya Muncul di Layar Web) -->
@@ -57,7 +65,6 @@
             <i class="bi bi-arrow-left"></i> Kembali ke Dashboard
         </a>
         <div class="d-flex gap-2">
-            <!-- Form Filter Wilayah & Tahun -->
             <form method="GET" action="{{ route('report.pdf') }}" class="d-flex gap-2">
                 <select name="regency_id" class="form-select form-select-sm" onchange="this.form.submit()">
                     @foreach($regencies as $reg)
@@ -80,7 +87,7 @@
     <div class="report-header d-flex justify-content-between align-items-center">
         <div>
             <h3 class="fw-bold text-uppercase m-0 text-primary">Laporan Eksekutif Analisis Kemiskinan & APBD</h3>
-            <div class="text-muted small fs-6">Pemerintah Provinsi Kepulauan Bangka Belitung • Tahun {{ $selectedYear }}</div>
+            <div class="text-muted small fs-6">Pemerintah Provinsi Kepulauan Bangka Belitung &bull; Tahun {{ $selectedYear }}</div>
         </div>
         <div class="text-end">
             <span class="badge bg-primary fs-6 px-3 py-2">{{ $selectedRegObj->name }}</span>
@@ -91,11 +98,11 @@
     <!-- BARIS 1: KARTU INDIKATOR MAKRO -->
     <div class="row g-3 mb-4">
         @forelse($indicatorSummary as $item)
-            <div class="col-md-3">
-                <div class="card p-3 border-0 bg-light">
+            <div class="col-md-3 col-6">
+                <div class="card p-3 border bg-light h-100">
                     <div class="text-muted small fw-semibold text-uppercase">{{ $item->indicator->name }}</div>
                     <div class="fs-4 fw-bold text-dark mt-1">
-                        {{ number_format($item->value, 2) }} <small class="fs-6 text-muted">{{ $item->indicator->unit }}</small>
+                        {{ number_format($item->value, 2, ',', '.') }} <small class="fs-6 text-muted">{{ $item->indicator->unit }}</small>
                     </div>
                 </div>
             </div>
@@ -104,25 +111,23 @@
         @endforelse
     </div>
 
-    <!-- BARIS 2: GRAFIK TREN & TABEL BELANJA -->
+    <!-- BARIS 2: GRAFIK TREN & KOMPOSISI BELANJA -->
     <div class="row g-4 mb-4">
-        <!-- Grafik Tren Kemiskinan 5 Tahun -->
         <div class="col-6">
             <div class="card h-100 border">
                 <div class="card-header bg-light fw-bold py-2">
-                    📈 Tren Kemiskinan ($P_0$) 5 Tahun Terakhir
+                    <i class="bi bi-graph-down-arrow text-primary me-1"></i> Tren Kemiskinan (P0) 5 Tahun Terakhir
                 </div>
                 <div class="card-body">
-                    <canvas id="p0TrendReportChart" style="max-height: 220px;"></canvas>
+                    <canvas id="p0TrendReportChart" style="max-height: 210px;"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Grafik Komposisi Belanja APBD -->
         <div class="col-6">
             <div class="card h-100 border">
                 <div class="card-header bg-light fw-bold py-2">
-                    🍩 Komposisi Alokasi APBD Sektoral ({{ $selectedYear }})
+                    <i class="bi bi-pie-chart-fill text-success me-1"></i> Komposisi Belanja Langsung per Urusan ({{ $selectedYear }})
                 </div>
                 <div class="card-body d-flex justify-content-center align-items-center">
                     <canvas id="apbdCompositionReportChart" style="max-height: 200px;"></canvas>
@@ -131,19 +136,86 @@
         </div>
     </div>
 
-    <!-- BARIS 3: TABEL ALOKASI ANGGARAN SEKTORAL -->
+    <!-- BARIS 3: RINGKASAN POSTUR APBD (4, 5.1, 5.2, 6) -->
     <div class="card border mb-4">
         <div class="card-header bg-light fw-bold py-2">
-            📋 Rincian Realisasi Belanja APBD Sektoral (Tahun {{ $selectedYear }})
+            <i class="bi bi-bank2 text-primary me-1"></i> Ringkasan Postur APBD (Tahun {{ $selectedYear }})
         </div>
         <div class="card-body p-0">
-            <table class="table table-bordered align-middle mb-0 text-sm">
+            <table class="table table-bordered table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;" class="text-center">Kode</th>
+                        <th>Uraian Struktur APBD</th>
+                        <th class="text-end" style="width: 220px;">Anggaran (Juta Rp)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="fw-bold table-success bg-opacity-10">
+                        <td class="text-center font-monospace">4</td>
+                        <td>PENDAPATAN DAERAH</td>
+                        <td class="text-end">Rp {{ number_format($posturApbd['pendapatan'], 2, ',', '.') }} Jt</td>
+                    </tr>
+                    <tr class="fw-bold">
+                        <td class="text-center font-monospace">5</td>
+                        <td>BELANJA DAERAH (5.1 + 5.2)</td>
+                        <td class="text-end">Rp {{ number_format($posturApbd['total_belanja'], 2, ',', '.') }} Jt</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center font-monospace text-muted">5.1</td>
+                        <td class="ps-4">Belanja Tidak Langsung</td>
+                        <td class="text-end">Rp {{ number_format($posturApbd['belanja_51'], 2, ',', '.') }} Jt</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center font-monospace text-muted">5.2</td>
+                        <td class="ps-4">Belanja Langsung (5 Urusan Prioritas)</td>
+                        <td class="text-end">Rp {{ number_format($posturApbd['belanja_52'], 2, ',', '.') }} Jt</td>
+                    </tr>
+                    <tr class="fw-bold table-light">
+                        <td class="text-center font-monospace">-</td>
+                        <td>SURPLUS / (DEFISIT) ANGGARAN (4 - 5)</td>
+                        <td class="text-end {{ $posturApbd['surplus_defisit'] < 0 ? 'text-danger' : 'text-success' }}">
+                            Rp {{ number_format($posturApbd['surplus_defisit'], 2, ',', '.') }} Jt
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-center font-monospace text-muted">6.1</td>
+                        <td class="ps-4">Penerimaan Pembiayaan Daerah</td>
+                        <td class="text-end">Rp {{ number_format($posturApbd['penerimaan_pembiayaan'], 2, ',', '.') }} Jt</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center font-monospace text-muted">6.2</td>
+                        <td class="ps-4">Pengeluaran Pembiayaan Daerah</td>
+                        <td class="text-end">Rp {{ number_format($posturApbd['pengeluaran_pembiayaan'], 2, ',', '.') }} Jt</td>
+                    </tr>
+                    <tr class="fw-bold">
+                        <td class="text-center font-monospace">6</td>
+                        <td>PEMBIAYAAN NETO (6.1 - 6.2)</td>
+                        <td class="text-end">Rp {{ number_format($posturApbd['pembiayaan_neto'], 2, ',', '.') }} Jt</td>
+                    </tr>
+                    <tr class="fw-bold table-primary">
+                        <td class="text-center font-monospace">-</td>
+                        <td>SISA LEBIH PEMBIAYAAN ANGGARAN (SILPA)</td>
+                        <td class="text-end text-primary">Rp {{ number_format($posturApbd['silpa'], 2, ',', '.') }} Jt</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BARIS 4: TABEL ALOKASI ANGGARAN BELANJA LANGSUNG (5.2) PER URUSAN -->
+    <div class="card border mb-4">
+        <div class="card-header bg-light fw-bold py-2">
+            <i class="bi bi-list-check text-primary me-1"></i> Rincian Alokasi Belanja Langsung (5.2) per Urusan (Tahun {{ $selectedYear }})
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-bordered table-sm align-middle mb-0">
                 <thead class="table-light">
                     <tr>
                         <th style="width: 50px;" class="text-center">No</th>
-                        <th>Sektor Urusan Belanja</th>
+                        <th>Urusan Belanja Langsung</th>
                         <th class="text-end">Total Alokasi Anggaran</th>
-                        <th class="text-end">Proporsi (%)</th>
+                        <th class="text-end" style="width: 120px;">Proporsi (%)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -151,22 +223,22 @@
                     @forelse($apbdSummary as $idx => $row)
                         <tr>
                             <td class="text-center fw-bold">{{ $idx + 1 }}</td>
-                            <td>{{ $row->sector->name }}</td>
-                            <td class="text-end fw-semibold">Rp {{ number_format($row->total_expense, 0, ',', '.') }} Jt</td>
+                            <td>{{ $urusanLabels[$row->sector->name] ?? $row->sector->name }}</td>
+                            <td class="text-end fw-semibold">Rp {{ number_format($row->total_expense, 2, ',', '.') }} Jt</td>
                             <td class="text-end">
-                                {{ $totalBudget > 0 ? number_format(($row->total_expense / $totalBudget) * 100, 1) : 0 }}%
+                                {{ $totalBudget > 0 ? number_format(($row->total_expense / $totalBudget) * 100, 1, ',', '.') : '0,0' }}%
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="text-center py-3 text-muted">Data anggaran tidak ditemukan.</td>
+                            <td colspan="4" class="text-center py-3 text-muted">Data anggaran belanja langsung tidak ditemukan.</td>
                         </tr>
                     @endforelse
                 </tbody>
                 <tfoot class="table-light fw-bold">
                     <tr>
-                        <td colspan="2" class="text-end">TOTAL BELANJA SEKTORAL:</td>
-                        <td class="text-end text-primary">Rp {{ number_format($totalBudget, 0, ',', '.') }} Jt</td>
+                        <td colspan="2" class="text-end">TOTAL BELANJA LANGSUNG (5.2):</td>
+                        <td class="text-end text-primary">Rp {{ number_format($totalBudget, 2, ',', '.') }} Jt</td>
                         <td class="text-end">100%</td>
                     </tr>
                 </tfoot>
@@ -175,11 +247,11 @@
     </div>
 
     <!-- TANDA TANGAN / KETERANGAN PENUTUP -->
-    <div class="row mt-5 pt-3 no-print-break">
+    <div class="row mt-4 pt-3">
         <div class="col-8">
             <div class="small text-muted">
-                * Dokumen laporan ini di-generate secara otomatis oleh Sistem Informasi <strong>Poverty Analytics</strong>.<br>
-                * Data digunakan untuk bahan evaluasi perencanaan pembangunan daerah.
+                * Dokumen laporan ini dihasilkan secara otomatis oleh Sistem Informasi <strong>Poverty Analytics</strong>.<br>
+                * Seluruh nominal anggaran disajikan dalam satuan Juta Rupiah sebagai bahan evaluasi perencanaan daerah.
             </div>
         </div>
         <div class="col-4 text-center">
@@ -193,7 +265,6 @@
 </div>
 
 <script>
-    // 1. Render Chart Tren Kemiskinan P0
     const p0Years = JSON.parse('{!! json_encode(array_keys($p0Trend->toArray())) !!}');
     const p0Values = JSON.parse('{!! json_encode(array_values($p0Trend->toArray())) !!}');
 
@@ -216,9 +287,16 @@
         }
     });
 
-    // 2. Render Chart Komposisi APBD
+    const urusanMap = {
+        'Kemiskinan Makro': 'Urusan Sosial (1.13)',
+        'Pendidikan': 'Urusan Pendidikan (1.01)',
+        'Kesehatan': 'Urusan Kesehatan (1.02)',
+        'Infrastruktur & Perumahan': 'Urusan Infrastruktur (1.03)',
+        'Ketenagakerjaan & Ekonomi': 'Urusan Pilihan (2.01)'
+    };
+
     const apbdSummary = JSON.parse('{!! json_encode($apbdSummary) !!}');
-    const sectorNames = apbdSummary.map(item => item.sector.name);
+    const sectorNames = apbdSummary.map(item => urusanMap[item.sector.name] || item.sector.name);
     const sectorExpenses = apbdSummary.map(item => item.total_expense);
 
     new Chart(document.getElementById('apbdCompositionReportChart'), {

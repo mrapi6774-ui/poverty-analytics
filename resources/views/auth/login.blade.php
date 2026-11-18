@@ -19,7 +19,7 @@
         }
 
         .login-card {
-            background: rgba(30, 41, 59, 0.75);
+            background: rgba(30, 41, 59, 0.8);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -27,7 +27,7 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             overflow: hidden;
             width: 100%;
-            max-width: 960px;
+            max-width: 920px;
         }
 
         .brand-section {
@@ -85,14 +85,6 @@
             box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
             color: #ffffff;
         }
-
-        .demo-badge {
-            background: rgba(56, 189, 248, 0.1);
-            border: 1px dashed rgba(56, 189, 248, 0.4);
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            font-size: 0.85rem;
-        }
     </style>
 </head>
 <body>
@@ -105,17 +97,17 @@
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-4">
                         <i class="bi bi-graph-up-arrow fs-2 text-warning"></i>
-                        <span class="fs-4 fw-bold tracking-wide">Poverty Analytics</span>
+                        <span class="fs-4 fw-bold">Poverty Analytics</span>
                     </div>
-                    <h3 class="fw-bold text-white mb-3">Sistem Analisis Kemiskinan & APBD</h3>
-                    <p class="text-white-50 leading-relaxed mb-4">
-                        Platform terintegrasi pengolah indikator makro pembangunan dan efektivitas anggaran daerah Provinsi Kepulauan Bangka Belitung.
+                    <h3 class="fw-bold text-white mb-3">Portal Pengelola Data & APBD</h3>
+                    <p class="text-white-50 mb-4">
+                        Panel administrasi terpadu untuk pengelolaan indikator makro kemiskinan, struktur postur APBD, dan impor data Excel Provinsi Kepulauan Bangka Belitung.
                     </p>
                 </div>
-                <div class="pt-4 border-top border-white-50">
+                <div class="pt-4 border-top border-white border-opacity-25">
                     <div class="d-flex align-items-center gap-2 small text-white-50">
                         <i class="bi bi-shield-check text-warning fs-5"></i>
-                        <span>Akses Terenkripsi & Terproteksi Bappeda</span>
+                        <span>Akses Terproteksi Administrator</span>
                     </div>
                 </div>
             </div>
@@ -125,15 +117,15 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h4 class="fw-bold text-white mb-1">Masuk Portal Admin</h4>
-                        <p class="text-secondary small m-0">Silakan masukkan kredensial akun Anda</p>
+                        <p class="text-secondary small m-0">Masukkan kredensial akun staf administrator</p>
                     </div>
-                    <a href="{{ route('time-series') }}" class="btn btn-outline-secondary btn-sm text-light border-secondary">
-                        <i class="bi bi-house me-1"></i> Public Mode
+                    <a href="{{ route('time-series') }}" class="btn btn-outline-light btn-sm opacity-75">
+                        <i class="bi bi-arrow-left me-1"></i> Portal Publik
                     </a>
                 </div>
 
                 @if(session('success_logout'))
-                    <div class="alert alert-info alert-dismissible fade show text-sm py-2" role="alert">
+                    <div class="alert alert-info alert-dismissible fade show small py-2" role="alert">
                         <i class="bi bi-info-circle me-1"></i> {{ session('success_logout') }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -146,7 +138,7 @@
                         <label class="form-label text-secondary small fw-semibold">Alamat Email Administrator</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="admin@bappeda.go.id" value="{{ old('email') }}" required autofocus>
+                            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="nama@bappeda.go.id" value="{{ old('email') }}" required autofocus>
                         </div>
                         @error('email')
                             <div class="text-danger small mt-1">{{ $message }}</div>
@@ -170,26 +162,16 @@
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div class="form-check">
                             <input class="form-check-input bg-dark border-secondary" type="checkbox" name="remember" id="remember">
-                            <label class="form-check-input-label text-secondary small" for="remember">
+                            <label class="form-check-label text-secondary small" for="remember">
                                 Ingat Saya di Perangkat Ini
                             </label>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-cyan w-100 mb-4">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Masuk ke Sistem
+                    <button type="submit" class="btn btn-cyan w-100">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Masuk ke Panel Admin
                     </button>
                 </form>
-
-                <!-- PETUNJUK DEMO AKUN -->
-                <div class="demo-badge text-info">
-                    <div class="fw-bold mb-1"><i class="bi bi-key-fill me-1"></i> Akun Akses Pengujian (Demo):</div>
-                    <div class="d-flex justify-content-between align-items-center small">
-                        <span>Email: <code>admin@bappeda.go.id</code></span>
-                        <span>Password: <code>admin123</code></span>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
