@@ -193,55 +193,125 @@ class DashboardController extends Controller
 }
 
     // 4. Halaman Analisis Korelasi (Scatter Plot)
+    // 4. Halaman Analisis Korelasi & Kuadran Prioritas (Scatter Plot)
     public function scatterPlot(Request $request)
-{
-    $selectedIndX = $request->get('indicator_x', 2); // Default: Rata-rata Lama Sekolah / Indikator 2
-    $selectedIndY = $request->get('indicator_y', 1); // Default: Persentase Penduduk Miskin (P0) / Indikator 1
-    $selectedYear = $request->get('year', 2026);
+    {
+        $selectedIndX = $request->get('indicator_x', 2); // Default: Indikator 2
+        $selectedIndY = $request->get('indicator_y', 1); // Default: Persentase Penduduk Miskin (P0)
+        $selectedYear = $request->get('year', 2026);
 
-    $sectors    = Sector::with('indicators')->get();
-    $indicators = Indicator::all();
-    $years      = range(2025, 2035);
+        $sectors    = Sector::with('indicators')->get();
+        $indicators = Indicator::all();
+        $years      = range(2025, 2035);
 
-    $indXObj = Indicator::find($selectedIndX);
-    $indYObj = Indicator::find($selectedIndY);
+        $indXObj = Indicator::find($selectedIndX);
+        $indYObj = Indicator::find($selectedIndY);
 
-    // Ambil data 7 Kabupaten/Kota untuk Variabel X & Y
-    $regencies = Regency::where('type', 'regency')->get();
+        // Ambil data 7 Kabupaten/Kota untuk Variabel X & Y
+        $regencies = Regency::where('type', 'regency')->get();
 
-    $scatterPoints = [];
-    $tableData     = [];
+        $rawRows = [];
+        foreach ($regencies as $reg) {
+            $valX = (float) (RegionalIndicatorData::where('regency_id', $reg->id)
+                ->where('indicator_id', $selectedIndX)
+                ->where('year', $selectedYear)
+                ->value('value') ?? 0);
 
-    foreach ($regencies as $reg) {
-        $valX = RegionalIndicatorData::where('regency_id', $reg->id)
-            ->where('indicator_id', $selectedIndX)
-            ->where('year', $selectedYear)
-            ->value('value') ?? 0;
+            $valY = (float) (RegionalIndicatorData::where('regency_id', $reg->id)
+                ->where('indicator_id', $selectedIndY)
+                ->where('year', $selectedYear)
+                ->value('value') ?? 0);
 
-        $valY = RegionalIndicatorData::where('regency_id', $reg->id)
-            ->where('indicator_id', $selectedIndY)
-            ->where('year', $selectedYear)
-            ->value('value') ?? 0;
+            $rawRows[] = [
+                'regency_name' => $reg->name,
+                'val_x'        => $valX,
+                'val_y'        => $valY,
+            ];
+        }
 
-        $scatterPoints[] = [
-            'x'     => (float) $valX,
-            'y'     => (float) $valY,
-            'label' => $reg->name,
-        ];
+        $n = count($rawRows);
+        $avgX = $n > 0 ? collect($rawRows)->avg('val_x') : 0;
+        $avgY = $n > 0 ? collect($rawRows)->avg('val_y') : 0;
 
-        $tableData[] = [
-            'regency_name' => $reg->name,
-            'val_x'        => $valX,
-            'val_y'        => $valY,
-        ];
+        // Hitung Koefisien Korelasi Pearson (r)
+        $num = 0;
+        $denX = 0;
+        $denY = 0;
+        foreach ($rawRows as $r) {
+            $dx = $r['val_x'] - $avgX;
+            $dy = $r['val_y'] - $avgY;
+            $num  += ($dx * $dy);
+            $denX += ($dx * $dx);
+            $denY += ($dy * $dy);
+        }
+
+        $denominator = sqrt($denX * $denY);
+        $correlationR = $denominator > 0 ? ($num / $denominator) : 0;
+
+        // Klasifikasi Kekuatan & Arah Korelasi
+        $absR = abs($correlationR);
+        if ($denominator == 0) {
+            $corrLabel = 'Data Konstan (Belum Ada Variasi)';
+            $corrBadge = 'secondary';
+        } elseif ($absR >= 0.70) {
+            $corrLabel = ($correlationR > 0 ? 'Korelasi Positif Kuat' : 'Korelasi Negatif Kuat');
+            $corrBadge = $correlationR > 0 ? 'primary' : 'success';
+        } elseif ($absR >= 0.40) {
+            $corrLabel = ($correlationR > 0 ? 'Korelasi Positif Sedang' : 'Korelasi Negatif Sedang');
+            $corrBadge = 'info';
+        } elseif ($absR >= 0.20) {
+            $corrLabel = ($correlationR > 0 ? 'Korelasi Positif Lemah' : 'Korelasi Negatif Lemah');
+            $corrBadge = 'warning';
+        } else {
+            $corrLabel = 'Sangat Lemah / Tidak Berkorelasi';
+            $corrBadge = 'secondary';
+        }
+
+        // Pemetaan Kuadran Wilayah (I, II, III, IV)
+        $scatterPoints = [];
+        $tableData     = [];
+
+        foreach ($rawRows as $row) {
+            $isHighX = $row['val_x'] >= $avgX;
+            $isHighY = $row['val_y'] >= $avgY;
+
+            if ($isHighX && $isHighY) {
+                $quadrant = 'Kuadran I';
+                $qBadge   = 'danger';
+            } elseif (!$isHighX && $isHighY) {
+                $quadrant = 'Kuadran II';
+                $qBadge   = 'warning';
+            } elseif (!$isHighX && !$isHighY) {
+                $quadrant = 'Kuadran III';
+                $qBadge   = 'success';
+            } else {
+                $quadrant = 'Kuadran IV';
+                $qBadge   = 'info';
+            }
+
+            $scatterPoints[] = [
+                'x'        => $row['val_x'],
+                'y'        => $row['val_y'],
+                'label'    => $row['regency_name'],
+                'quadrant' => $quadrant,
+            ];
+
+            $tableData[] = [
+                'regency_name' => $row['regency_name'],
+                'val_x'        => $row['val_x'],
+                'val_y'        => $row['val_y'],
+                'quadrant'     => $quadrant,
+                'q_badge'      => $qBadge,
+            ];
+        }
+
+        return view('pages.scatter-plot', compact(
+            'sectors', 'indicators', 'years',
+            'selectedIndX', 'selectedIndY', 'selectedYear',
+            'indXObj', 'indYObj', 'scatterPoints', 'tableData',
+            'avgX', 'avgY', 'correlationR', 'corrLabel', 'corrBadge'
+        ));
     }
-
-    return view('pages.scatter-plot', compact(
-        'sectors', 'indicators', 'years',
-        'selectedIndX', 'selectedIndY', 'selectedYear',
-        'indXObj', 'indYObj', 'scatterPoints', 'tableData'
-    ));
-}
 
     // Halaman Laporan Eksekutif & Cetak PDF
 // Halaman Laporan Eksekutif & Cetak PDF

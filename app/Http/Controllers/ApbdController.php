@@ -19,7 +19,7 @@ class ApbdController extends Controller
         // 1. Ambil Parameter Filter
         $selectedRegency = $request->input('regency_id', 3);
         $selectedYear    = $request->input('year', 2026);
-
+        $regencies      = Regency::whereIn('type', ['regency', 'province'])->get();
         $regencies      = Regency::where('type', 'regency')->get();
         $selectedRegObj = Regency::find($selectedRegency);
         $years          = range(2025, 2035);

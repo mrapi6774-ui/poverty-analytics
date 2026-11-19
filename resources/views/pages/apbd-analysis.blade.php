@@ -478,6 +478,9 @@
 @endsection
 
 @section('scripts')
+@php
+     $mappedApbdTrend = collect($years)->map(fn($y) => (float) ($apbdTrend[$y] ?? 0))->values();
+@endphp
 <script>
     // Pengalih Tab Urusan Program
     document.querySelectorAll('.custom-tab-btn').forEach(btn => {
@@ -495,14 +498,14 @@
 
     // Data Grafik Tren APBD
     const years = JSON.parse('{!! json_encode($years) !!}');
-    const apbdTrendValues = JSON.parse('{!! json_encode(array_values($apbdTrend->toArray())) !!}');
+    const apbdTrendValues = JSON.parse('{!! json_encode($mappedApbdTrend) !!}');
 
     new Chart(document.getElementById('apbdTrendChart'), {
         type: 'bar',
         data: {
             labels: years,
             datasets: [{
-                label: 'Total Belanja APBD (Juta Rp)',
+                label: 'Total Belanja Langsung APBD (Juta Rp)',
                 data: apbdTrendValues,
                 backgroundColor: '#198754',
                 borderRadius: 4
@@ -514,9 +517,17 @@
         }
     });
 
-    // Data Grafik Komposisi Sektor
+    // Data Grafik Komposisi Sektor (Diselaraskan dengan nama urusan resmi)
+    const urusanMap = {
+        'Kemiskinan Makro': 'Urusan Sosial (1.13)',
+        'Pendidikan': 'Urusan Pendidikan (1.01)',
+        'Kesehatan': 'Urusan Kesehatan (1.02)',
+        'Infrastruktur & Perumahan': 'Urusan Infrastruktur (1.03)',
+        'Ketenagakerjaan & Ekonomi': 'Urusan Pilihan (2.01)'
+    };
+
     const sectorComposition = JSON.parse('{!! json_encode($sectorComposition) !!}');
-    const sectorLabels = sectorComposition.map(item => item.sector.name);
+    const sectorLabels = sectorComposition.map(item => urusanMap[item.sector.name] || item.sector.name);
     const sectorValues = sectorComposition.map(item => item.total_expense);
 
     new Chart(document.getElementById('sectorCompositionChart'), {
