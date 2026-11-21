@@ -4,10 +4,15 @@
 @section('page-title', '💰 Analisis Pendapatan, Belanja APBD & Efektivitas Alokasi')
 
 @section('content')
-<!-- Form Filter -->
-<div class="card shadow-sm mb-4 border-0">
+@php
+    $activeApbdTab = request('tab', 'postur');
+@endphp
+
+<!-- Form Filter Wilayah & Tahun (Sinkron untuk Semua Sub-Tampilan APBD) -->
+<div class="card shadow-sm mb-3 border-0">
     <div class="card-body bg-white rounded">
-        <form method="GET" action="{{ route('apbd-analysis') }}" class="row g-3 align-items-end">
+        <form method="GET" action="{{ route('apbd-analysis') }}" id="apbdFilterForm" class="row g-3 align-items-end">
+            <input type="hidden" name="tab" id="activeApbdTabInput" value="{{ $activeApbdTab }}">
             <div class="col-md-5">
                 <label class="form-label fw-semibold">Pilih Wilayah / Daerah:</label>
                 <select name="regency_id" class="form-select">
@@ -35,8 +40,8 @@
     </div>
 </div>
 
-<!-- Ringkasan Info APBD -->
-<div class="row g-4 mb-4">
+<!-- Ringkasan Info APBD (Selalu Tampil Sebagai Patokan Cepat) -->
+<div class="row g-3 mb-4">
     <div class="col-md-6 col-lg-3">
         <div class="card shadow-sm border-0 border-start border-4 border-success bg-white h-100 p-3">
             <div class="text-muted small fw-semibold text-uppercase">Total Pendapatan (4)</div>
@@ -75,79 +80,89 @@
     </div>
 </div>
 
-<!-- BARIS 1: Tabel Ringkasan Postur APBD (Pendapatan, Belanja 5.1 & 5.2, Pembiayaan) -->
-<div class="row g-4 mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-                <span>📊 Ringkasan Postur APBD — {{ $selectedRegObj->name ?? '-' }} (Tahun {{ $selectedYear }})</span>
-                <span class="badge bg-dark">Format Standar Ringkasan APBD (Juta Rp)</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
-                    <table class="table table-bordered table-sm align-middle mb-0">
-                        <thead class="table-dark sticky-top">
-                            <tr>
-                                <th style="width: 110px;">Kode</th>
-                                <th>Uraian Akun APBD</th>
-                                <th class="text-end" style="width: 180px;">Nominal (Juta Rp)</th>
-                                <th class="text-end" style="width: 130px;">Proporsi (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- KELOMPOK 4: PENDAPATAN DAERAH -->
-                            <tr class="table-success fw-bold">
-                                <td>4</td>
-                                <td>PENDAPATAN DAERAH</td>
-                                <td class="text-end">{{ number_format($totalPendapatan, 2, ',', '.') }}</td>
-                                <td class="text-end">{{ $totalPendapatan > 0 ? '100,00%' : '0,00%' }}</td>
-                            </tr>
-                            @foreach($pendapatanAccounts->groupBy('category_code') as $catCode => $items)
-                                @php
-                                    $catTotal = $items->sum(fn($i) => $i->records->first()->amount ?? 0);
-                                    $catPct   = $totalPendapatan > 0 ? ($catTotal / $totalPendapatan) * 100 : 0;
-                                @endphp
-                                <tr class="table-light fw-bold">
-                                    <td>{{ $catCode }}</td>
-                                    <td>{{ $items->first()->category_name }}</td>
-                                    <td class="text-end">{{ number_format($catTotal, 2, ',', '.') }}</td>
-                                    <td class="text-end">{{ number_format($catPct, 2, ',', '.') }}%</td>
-                                </tr>
-                                @foreach($items as $acc)
-                                    @php
-                                        $val = $acc->records->first()->amount ?? 0;
-                                        $pct = $totalPendapatan > 0 ? ($val / $totalPendapatan) * 100 : 0;
-                                    @endphp
-                                    <tr>
-                                        <td class="ps-3 font-monospace small text-muted">{{ $acc->code }}</td>
-                                        <td class="ps-4">{{ $acc->name }}</td>
-                                        <td class="text-end">{{ number_format($val, 2, ',', '.') }}</td>
-                                        <td class="text-end text-muted">{{ number_format($pct, 2, ',', '.') }}%</td>
-                                    </tr>
-                                @endforeach
-                            @endforeach
+<!-- NAVIGASI SUB-TAMPILAN ANALISIS APBD -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-2 bg-white rounded">
+        <ul class="nav nav-pills nav-fill gap-2" id="apbdMainViewTabs">
+            <li class="nav-item">
+                <button type="button"
+                        class="nav-link fw-bold apbd-view-btn {{ $activeApbdTab === 'postur' ? 'active' : '' }}"
+                        data-view="postur"
+                        data-target="#view-postur">
+                    <i class="bi bi-bank2 me-1"></i> 1. Postur Umum APBD
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button"
+                        class="nav-link fw-bold apbd-view-btn {{ $activeApbdTab === 'grafik' ? 'active' : '' }}"
+                        data-view="grafik"
+                        data-target="#view-grafik">
+                    <i class="bi bi-bar-chart-line-fill me-1"></i> 2. Tren & Komposisi Urusan
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button"
+                        class="nav-link fw-bold apbd-view-btn {{ $activeApbdTab === 'efektivitas' ? 'active' : '' }}"
+                        data-view="efektivitas"
+                        data-target="#view-efektivitas">
+                    <i class="bi bi-lightning-charge-fill me-1"></i> 3. Relevansi & Efektivitas
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button"
+                        class="nav-link fw-bold apbd-view-btn {{ $activeApbdTab === 'program' ? 'active' : '' }}"
+                        data-view="program"
+                        data-target="#view-program">
+                    <i class="bi bi-folder2-open me-1"></i> 4. Rincian Program & Kegiatan
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
 
-                            <!-- KELOMPOK 5: BELANJA DAERAH -->
-                            <tr class="table-primary fw-bold">
-                                <td>5</td>
-                                <td>BELANJA DAERAH (5.1 + 5.2)</td>
-                                <td class="text-end">{{ number_format($totalSemuaBelanja, 2, ',', '.') }}</td>
-                                <td class="text-end">{{ $totalSemuaBelanja > 0 ? '100,00%' : '0,00%' }}</td>
-                            </tr>
-                            <!-- 5.1 Belanja Tidak Langsung -->
+<!-- ===================================================================== -->
+<!-- SUB-TAMPILAN 1: POSTUR UMUM APBD (4, 5.1, 5.2, 6)                     -->
+<!-- ===================================================================== -->
+<div class="apbd-view-pane {{ $activeApbdTab === 'postur' ? '' : 'd-none' }}" id="view-postur">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span>📊 Ringkasan Postur APBD — {{ $selectedRegObj->name ?? '-' }} (Tahun {{ $selectedYear }})</span>
+            <span class="badge bg-dark">Format Standar Ringkasan APBD (Juta Rp)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                <table class="table table-bordered table-sm align-middle mb-0">
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th style="width: 110px;">Kode</th>
+                            <th>Uraian Akun APBD</th>
+                            <th class="text-end" style="width: 180px;">Nominal (Juta Rp)</th>
+                            <th class="text-end" style="width: 130px;">Proporsi (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- KELOMPOK 4: PENDAPATAN DAERAH -->
+                        <tr class="table-success fw-bold">
+                            <td>4</td>
+                            <td>PENDAPATAN DAERAH</td>
+                            <td class="text-end">{{ number_format($totalPendapatan, 2, ',', '.') }}</td>
+                            <td class="text-end">{{ $totalPendapatan > 0 ? '100,00%' : '0,00%' }}</td>
+                        </tr>
+                        @foreach($pendapatanAccounts->groupBy('category_code') as $catCode => $items)
                             @php
-                                $pct51 = $totalSemuaBelanja > 0 ? ($totalBelanja51 / $totalSemuaBelanja) * 100 : 0;
+                                $catTotal = $items->sum(fn($i) => $i->records->first()->amount ?? 0);
+                                $catPct   = $totalPendapatan > 0 ? ($catTotal / $totalPendapatan) * 100 : 0;
                             @endphp
                             <tr class="table-light fw-bold">
-                                <td>5.1</td>
-                                <td>Belanja Tidak Langsung</td>
-                                <td class="text-end">{{ number_format($totalBelanja51, 2, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($pct51, 2, ',', '.') }}%</td>
+                                <td>{{ $catCode }}</td>
+                                <td>{{ $items->first()->category_name }}</td>
+                                <td class="text-end">{{ number_format($catTotal, 2, ',', '.') }}</td>
+                                <td class="text-end">{{ number_format($catPct, 2, ',', '.') }}%</td>
                             </tr>
-                            @foreach($belanja51Accounts as $acc)
+                            @foreach($items as $acc)
                                 @php
                                     $val = $acc->records->first()->amount ?? 0;
-                                    $pct = $totalSemuaBelanja > 0 ? ($val / $totalSemuaBelanja) * 100 : 0;
+                                    $pct = $totalPendapatan > 0 ? ($val / $totalPendapatan) * 100 : 0;
                                 @endphp
                                 <tr>
                                     <td class="ps-3 font-monospace small text-muted">{{ $acc->code }}</td>
@@ -156,321 +171,354 @@
                                     <td class="text-end text-muted">{{ number_format($pct, 2, ',', '.') }}%</td>
                                 </tr>
                             @endforeach
+                        @endforeach
 
-                            <!-- 5.2 Belanja Langsung (Otomatis dari 5 Urusan) -->
+                        <!-- KELOMPOK 5: BELANJA DAERAH -->
+                        <tr class="table-primary fw-bold">
+                            <td>5</td>
+                            <td>BELANJA DAERAH (5.1 + 5.2)</td>
+                            <td class="text-end">{{ number_format($totalSemuaBelanja, 2, ',', '.') }}</td>
+                            <td class="text-end">{{ $totalSemuaBelanja > 0 ? '100,00%' : '0,00%' }}</td>
+                        </tr>
+                        @php
+                            $pct51 = $totalSemuaBelanja > 0 ? ($totalBelanja51 / $totalSemuaBelanja) * 100 : 0;
+                        @endphp
+                        <tr class="table-light fw-bold">
+                            <td>5.1</td>
+                            <td>Belanja Tidak Langsung</td>
+                            <td class="text-end">{{ number_format($totalBelanja51, 2, ',', '.') }}</td>
+                            <td class="text-end">{{ number_format($pct51, 2, ',', '.') }}%</td>
+                        </tr>
+                        @foreach($belanja51Accounts as $acc)
                             @php
-                                $pct52 = $totalSemuaBelanja > 0 ? ($totalBelanja52 / $totalSemuaBelanja) * 100 : 0;
+                                $val = $acc->records->first()->amount ?? 0;
+                                $pct = $totalSemuaBelanja > 0 ? ($val / $totalSemuaBelanja) * 100 : 0;
+                            @endphp
+                            <tr>
+                                <td class="ps-3 font-monospace small text-muted">{{ $acc->code }}</td>
+                                <td class="ps-4">{{ $acc->name }}</td>
+                                <td class="text-end">{{ number_format($val, 2, ',', '.') }}</td>
+                                <td class="text-end text-muted">{{ number_format($pct, 2, ',', '.') }}%</td>
+                            </tr>
+                        @endforeach
+
+                        @php
+                            $pct52 = $totalSemuaBelanja > 0 ? ($totalBelanja52 / $totalSemuaBelanja) * 100 : 0;
+                        @endphp
+                        <tr class="table-light fw-bold">
+                            <td>5.2</td>
+                            <td>Belanja Langsung (Akumulasi 5 Urusan Program)</td>
+                            <td class="text-end">{{ number_format($totalBelanja52, 2, ',', '.') }}</td>
+                            <td class="text-end">{{ number_format($pct52, 2, ',', '.') }}%</td>
+                        </tr>
+
+                        <!-- SURPLUS / DEFISIT -->
+                        <tr class="{{ $surplusDefisit >= 0 ? 'table-info' : 'table-danger' }} fw-bold">
+                            <td>-</td>
+                            <td>SURPLUS / (DEFISIT) ANGGARAN</td>
+                            <td class="text-end">{{ number_format($surplusDefisit, 2, ',', '.') }}</td>
+                            <td class="text-end">-</td>
+                        </tr>
+
+                        <!-- KELOMPOK 6: PEMBIAYAAN DAERAH -->
+                        <tr class="table-secondary fw-bold">
+                            <td>6</td>
+                            <td>PEMBIAYAAN NETO (6.1 - 6.2)</td>
+                            <td class="text-end">{{ number_format($pembiayaanNeto, 2, ',', '.') }}</td>
+                            <td class="text-end">-</td>
+                        </tr>
+                        @foreach($pembiayaanAccounts->groupBy('category_code') as $catCode => $items)
+                            @php
+                                $catTotal = $items->sum(fn($i) => $i->records->first()->amount ?? 0);
                             @endphp
                             <tr class="table-light fw-bold">
-                                <td>5.2</td>
-                                <td>Belanja Langsung (Akumulasi 5 Urusan Program)</td>
-                                <td class="text-end">{{ number_format($totalBelanja52, 2, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($pct52, 2, ',', '.') }}%</td>
-                            </tr>
-
-                            <!-- SURPLUS / DEFISIT -->
-                            <tr class="{{ $surplusDefisit >= 0 ? 'table-info' : 'table-danger' }} fw-bold">
-                                <td>-</td>
-                                <td>SURPLUS / (DEFISIT) ANGGARAN</td>
-                                <td class="text-end">{{ number_format($surplusDefisit, 2, ',', '.') }}</td>
+                                <td>{{ $catCode }}</td>
+                                <td>{{ $items->first()->category_name }}</td>
+                                <td class="text-end">{{ number_format($catTotal, 2, ',', '.') }}</td>
                                 <td class="text-end">-</td>
                             </tr>
-
-                            <!-- KELOMPOK 6: PEMBIAYAAN DAERAH -->
-                            <tr class="table-secondary fw-bold">
-                                <td>6</td>
-                                <td>PEMBIAYAAN NETO (6.1 - 6.2)</td>
-                                <td class="text-end">{{ number_format($pembiayaanNeto, 2, ',', '.') }}</td>
-                                <td class="text-end">-</td>
-                            </tr>
-                            @foreach($pembiayaanAccounts->groupBy('category_code') as $catCode => $items)
+                            @foreach($items as $acc)
                                 @php
-                                    $catTotal = $items->sum(fn($i) => $i->records->first()->amount ?? 0);
+                                    $val = $acc->records->first()->amount ?? 0;
                                 @endphp
-                                <tr class="table-light fw-bold">
-                                    <td>{{ $catCode }}</td>
-                                    <td>{{ $items->first()->category_name }}</td>
-                                    <td class="text-end">{{ number_format($catTotal, 2, ',', '.') }}</td>
-                                    <td class="text-end">-</td>
+                                <tr>
+                                    <td class="ps-3 font-monospace small text-muted">{{ $acc->code }}</td>
+                                    <td class="ps-4">{{ $acc->name }}</td>
+                                    <td class="text-end">{{ number_format($val, 2, ',', '.') }}</td>
+                                    <td class="text-end text-muted">-</td>
                                 </tr>
-                                @foreach($items as $acc)
-                                    @php
-                                        $val = $acc->records->first()->amount ?? 0;
-                                    @endphp
-                                    <tr>
-                                        <td class="ps-3 font-monospace small text-muted">{{ $acc->code }}</td>
-                                        <td class="ps-4">{{ $acc->name }}</td>
-                                        <td class="text-end">{{ number_format($val, 2, ',', '.') }}</td>
-                                        <td class="text-end text-muted">-</td>
-                                    </tr>
-                                @endforeach
                             @endforeach
-                        </tbody>
-                    </table>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- SUB-TAMPILAN 2: GRAFIK TREN APBD & KOMPOSISI BELANJA PER URUSAN       -->
+<!-- ===================================================================== -->
+<div class="apbd-view-pane {{ $activeApbdTab === 'grafik' ? '' : 'd-none' }}" id="view-grafik">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white fw-bold py-3">
+                    📈 Tren Total Belanja Langsung APBD — {{ $selectedRegObj->name ?? '-' }} (2025–2035)
+                </div>
+                <div class="card-body">
+                    <div style="height: 340px;">
+                        <canvas id="apbdTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white fw-bold py-3">
+                    🍩 Komposisi Belanja per Urusan ({{ $selectedYear }})
+                </div>
+                <div class="card-body d-flex justify-content-center align-items-center">
+                    <div style="height: 320px; width: 100%;">
+                        <canvas id="sectorCompositionChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- BARIS 2: Grafik Tren Waktu APBD & Doughnut Komposisi Belanja -->
-<div class="row g-4 mb-4">
-    <div class="col-lg-7">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white fw-bold py-3">
-                📈 Tren Total Belanja Langsung APBD (2025–2035)
-            </div>
-            <div class="card-body">
-                <canvas id="apbdTrendChart" style="max-height: 320px;"></canvas>
-            </div>
+<!-- ===================================================================== -->
+<!-- SUB-TAMPILAN 3: RELEVANSI & EFEKTIVITAS ALOKASI ANGGARAN              -->
+<!-- ===================================================================== -->
+<div class="apbd-view-pane {{ $activeApbdTab === 'efektivitas' ? '' : 'd-none' }}" id="view-efektivitas">
+    <!-- Matriks Relevansi -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span>🎯 Matriks Relevansi Belanja per Sektor — {{ $selectedRegObj->name ?? '-' }} (Tahun {{ $selectedYear }})</span>
+            <span class="badge bg-primary">Keterkaitan Alokasi & Capaian Indikator</span>
         </div>
-    </div>
-    <div class="col-lg-5">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white fw-bold py-3">
-                🍩 Komposisi Belanja per Sektor ({{ $selectedYear }})
-            </div>
-            <div class="card-body d-flex justify-content-center align-items-center">
-                <canvas id="sectorCompositionChart" style="max-height: 300px;"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- BARIS 3: Tabel Matriks Relevansi Belanja per Sektor -->
-<div class="row g-4 mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-                <span>🎯 Matriks Relevansi Belanja per Sektor (Tahun {{ $selectedYear }})</span>
-                <span class="badge bg-primary">Keterkaitan Alokasi & Capaian Indikator</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 60px;">No</th>
+                            <th>Sektor Program</th>
+                            <th class="text-end">Total Belanja (Juta Rp)</th>
+                            <th>Indikator Utama Sektor</th>
+                            <th class="text-center">Capaian Indikator</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($relevanceData as $index => $rel)
                             <tr>
-                                <th class="text-center">No</th>
-                                <th>Sektor Program</th>
-                                <th class="text-end">Total Belanja (Juta Rp)</th>
-                                <th>Indikator Utama Sektor</th>
-                                <th class="text-center">Capaian Indikator</th>
+                                <td class="fw-bold text-center">{{ $index + 1 }}</td>
+                                <td class="fw-semibold">{{ $rel['sector_name'] }}</td>
+                                <td class="text-end fw-bold text-primary">
+                                    Rp {{ number_format($rel['budget'], 0, ',', '.') }} Jt
+                                </td>
+                                <td>
+                                    <small class="text-muted d-block">{{ $rel['indicator_name'] }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info text-dark px-3 py-2">{{ $rel['indicator_value'] }}</span>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($relevanceData as $index => $rel)
-                                <tr>
-                                    <td class="fw-bold text-center">{{ $index + 1 }}</td>
-                                    <td class="fw-semibold">{{ $rel['sector_name'] }}</td>
-                                    <td class="text-end fw-bold text-primary">
-                                        Rp {{ number_format($rel['budget'], 0, ',', '.') }} Jt
-                                    </td>
-                                    <td>
-                                        <small class="text-muted d-block">{{ $rel['indicator_name'] }}</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info text-dark px-3 py-2">{{ $rel['indicator_value'] }}</span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">Data relevansi belanja tidak ditemukan.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- BARIS 4: Tabel Analisis Efektivitas Alokasi Anggaran -->
-<div class="row g-4 mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-                <span>⚡ Tabel Analisis Efektivitas Alokasi Anggaran Sektoral (Tahun {{ $selectedYear }})</span>
-                <span class="badge bg-secondary">Target: Penurunan Kemiskinan (P0)</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                        @empty
                             <tr>
-                                <th class="text-center">No</th>
-                                <th>Sektor Belanja</th>
-                                <th class="text-end">Alokasi Anggaran (Juta Rp)</th>
-                                <th class="text-end">Perubahan Anggaran vs T-1</th>
-                                <th class="text-center">Dampak Kemiskinan (P0)</th>
-                                <th class="text-center">Status Efektivitas</th>
+                                <td colspan="5" class="text-center py-4 text-muted">Data relevansi belanja tidak ditemukan.</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($effectivenessData as $index => $row)
-                                <tr>
-                                    <td class="fw-bold text-center">{{ $index + 1 }}</td>
-                                    <td>{{ $row['sector_name'] }}</td>
-                                    <td class="text-end fw-bold text-success">
-                                        Rp {{ number_format($row['current_exp'], 0, ',', '.') }} Jt
-                                    </td>
-                                    <td class="text-end">
-                                        @if($row['delta_exp'] > 0)
-                                            <span class="text-success"><i class="bi bi-arrow-up-right"></i> +Rp {{ number_format($row['delta_exp'], 0, ',', '.') }} Jt</span>
-                                        @elseif($row['delta_exp'] < 0)
-                                            <span class="text-danger"><i class="bi bi-arrow-down-right"></i> -Rp {{ number_format(abs($row['delta_exp']), 0, ',', '.') }} Jt</span>
-                                        @else
-                                            <span class="text-muted">Tetap</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-center">
-                                        @if($row['delta_p0'] < 0)
-                                            <span class="badge bg-success"><i class="bi bi-graph-down-arrow"></i> Turun {{ number_format(abs($row['delta_p0']), 2) }}%</span>
-                                        @elseif($row['delta_p0'] > 0)
-                                            <span class="badge bg-danger"><i class="bi bi-graph-up-arrow"></i> Naik {{ number_format($row['delta_p0'], 2) }}%</span>
-                                        @else
-                                            <span class="badge bg-secondary">Stagnan</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-center">
-                                        @if($row['status'] === 'Sangat Efektif')
-                                            <span class="badge bg-success p-2"><i class="bi bi-check-circle-fill me-1"></i> Sangat Efektif</span>
-                                        @elseif($row['status'] === 'Kurang Efektif')
-                                            <span class="badge bg-warning text-dark p-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Kurang Efektif</span>
-                                        @else
-                                            <span class="badge bg-light text-dark border p-2">Netral</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">Data belanja APBD tidak ditemukan.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabel Analisis Efektivitas -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span>⚡ Tabel Analisis Efektivitas Alokasi Anggaran Sektoral (Tahun {{ $selectedYear }})</span>
+            <span class="badge bg-secondary">Target: Penurunan Kemiskinan (P0)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 60px;">No</th>
+                            <th>Sektor Belanja</th>
+                            <th class="text-end">Alokasi Anggaran (Juta Rp)</th>
+                            <th class="text-end">Perubahan Anggaran vs T-1</th>
+                            <th class="text-center">Dampak Kemiskinan (P0)</th>
+                            <th class="text-center">Status Efektivitas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($effectivenessData as $index => $row)
+                            <tr>
+                                <td class="fw-bold text-center">{{ $index + 1 }}</td>
+                                <td>{{ $row['sector_name'] }}</td>
+                                <td class="text-end fw-bold text-success">
+                                    Rp {{ number_format($row['current_exp'], 0, ',', '.') }} Jt
+                                </td>
+                                <td class="text-end">
+                                    @if($row['delta_exp'] > 0)
+                                        <span class="text-success"><i class="bi bi-arrow-up-right"></i> +Rp {{ number_format($row['delta_exp'], 0, ',', '.') }} Jt</span>
+                                    @elseif($row['delta_exp'] < 0)
+                                        <span class="text-danger"><i class="bi bi-arrow-down-right"></i> -Rp {{ number_format(abs($row['delta_exp']), 0, ',', '.') }} Jt</span>
+                                    @else
+                                        <span class="text-muted">Tetap</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if($row['delta_p0'] < 0)
+                                        <span class="badge bg-success"><i class="bi bi-graph-down-arrow"></i> Turun {{ number_format(abs($row['delta_p0']), 2) }}%</span>
+                                    @elseif($row['delta_p0'] > 0)
+                                        <span class="badge bg-danger"><i class="bi bi-graph-up-arrow"></i> Naik {{ number_format($row['delta_p0'], 2) }}%</span>
+                                    @else
+                                        <span class="badge bg-secondary">Stagnan</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if($row['status'] === 'Sangat Efektif')
+                                        <span class="badge bg-success p-2"><i class="bi bi-check-circle-fill me-1"></i> Sangat Efektif</span>
+                                    @elseif($row['status'] === 'Kurang Efektif')
+                                        <span class="badge bg-warning text-dark p-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Kurang Efektif</span>
+                                    @else
+                                        <span class="badge bg-light text-dark border p-2">Netral</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">Data belanja APBD tidak ditemukan.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-<!-- BARIS 5: Rincian Program & Sub-Kegiatan per Urusan (Belanja Langsung 5.2) -->
-<div class="row g-4">
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-                <span>📂 Rincian Belanja Program & Sub-Kegiatan per Urusan (Tahun {{ $selectedYear }})</span>
-                <span class="badge bg-dark">Hierarki Program (Level 1) & Kegiatan (Level 2)</span>
-            </div>
-            <div class="card-body">
-                @php
-                    $urusanLabels = [
-                        'Kemiskinan Makro'           => 'Urusan Sosial (1.13)',
-                        'Pendidikan'                 => 'Urusan Pendidikan (1.01)',
-                        'Kesehatan'                  => 'Urusan Kesehatan (1.02)',
-                        'Infrastruktur & Perumahan'  => 'Urusan Infrastruktur (1.03)',
-                        'Ketenagakerjaan & Ekonomi'  => 'Urusan Pilihan (2.01)',
-                    ];
-                @endphp
+<!-- ===================================================================== -->
+<!-- SUB-TAMPILAN 4: RINCIAN PROGRAM & SUB-KEGIATAN PER URUSAN (5.2)       -->
+<!-- ===================================================================== -->
+<div class="apbd-view-pane {{ $activeApbdTab === 'program' ? '' : 'd-none' }}" id="view-program">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span>📂 Rincian Belanja Program & Sub-Kegiatan — {{ $selectedRegObj->name ?? '-' }} (Tahun {{ $selectedYear }})</span>
+            <span class="badge bg-dark">Hierarki Program (Level 1) & Kegiatan (Level 2)</span>
+        </div>
+        <div class="card-body">
+            @php
+                $urusanLabels = [
+                    'Kemiskinan Makro'           => 'Urusan Sosial (1.13)',
+                    'Pendidikan'                 => 'Urusan Pendidikan (1.01)',
+                    'Kesehatan'                  => 'Urusan Kesehatan (1.02)',
+                    'Infrastruktur & Perumahan'  => 'Urusan Infrastruktur (1.03)',
+                    'Ketenagakerjaan & Ekonomi'  => 'Urusan Pilihan (2.01)',
+                ];
+            @endphp
 
-                <!-- Nav Tabs untuk 5 Urusan -->
-                <ul class="nav nav-pills mb-3 gap-2" id="sectorProgramTabs" role="tablist">
-                    @foreach($sectors as $idx => $sec)
-                        @php
-                            $labelUrusan = $urusanLabels[$sec->name] ?? $sec->name;
-                        @endphp
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-semibold custom-tab-btn {{ $idx === 0 ? 'active' : '' }}"
-                                    data-target="#pane-sec-{{ $sec->id }}"
-                                    type="button">
-                                {{ $labelUrusan }}
-                                <span class="badge bg-light text-dark ms-1">
-                                    {{ isset($programsBySector[$sec->id]) ? $programsBySector[$sec->id]->count() : 0 }} Prog
-                                </span>
-                            </button>
-                        </li>
-                    @endforeach
-                </ul>
+            <!-- Nav Tabs untuk 5 Urusan -->
+            <ul class="nav nav-pills mb-3 gap-2" id="sectorProgramTabs" role="tablist">
+                @foreach($sectors as $idx => $sec)
+                    @php
+                        $labelUrusan = $urusanLabels[$sec->name] ?? $sec->name;
+                    @endphp
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold custom-tab-btn {{ $idx === 0 ? 'active' : '' }}"
+                                data-target="#pane-sec-{{ $sec->id }}"
+                                type="button">
+                            {{ $labelUrusan }}
+                            <span class="badge bg-light text-dark ms-1">
+                                {{ isset($programsBySector[$sec->id]) ? $programsBySector[$sec->id]->count() : 0 }} Prog
+                            </span>
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
 
-                <!-- Tab Content -->
-                <div class="tab-content" id="sectorProgramTabsContent">
-                    @foreach($sectors as $idx => $sec)
-                        <div class="custom-tab-pane {{ $idx === 0 ? '' : 'd-none' }}"
-                             id="pane-sec-{{ $sec->id }}">
-                            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
-                                <table class="table table-bordered table-sm align-middle mb-0">
-                                    <thead class="table-dark sticky-top">
-                                        <tr>
-                                            <th class="text-center" style="width: 60px;">Level</th>
-                                            <th style="width: 170px;">Kode Rekening</th>
-                                            <th>Nama Program / Sub-Kegiatan</th>
-                                            <th class="text-end" style="width: 140px;">B. Pegawai</th>
-                                            <th class="text-end" style="width: 150px;">B. Barang Jasa</th>
-                                            <th class="text-end" style="width: 140px;">B. Modal</th>
-                                            <th class="text-end" style="width: 150px;">Jumlah (Juta Rp)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+            <!-- Tab Content -->
+            <div class="tab-content" id="sectorProgramTabsContent">
+                @foreach($sectors as $idx => $sec)
+                    <div class="custom-tab-pane {{ $idx === 0 ? '' : 'd-none' }}"
+                         id="pane-sec-{{ $sec->id }}">
+                        <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                            <table class="table table-bordered table-sm align-middle mb-0">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th class="text-center" style="width: 60px;">Level</th>
+                                        <th style="width: 170px;">Kode Rekening</th>
+                                        <th>Nama Program / Sub-Kegiatan</th>
+                                        <th class="text-end" style="width: 140px;">B. Pegawai</th>
+                                        <th class="text-end" style="width: 150px;">B. Barang Jasa</th>
+                                        <th class="text-end" style="width: 140px;">B. Modal</th>
+                                        <th class="text-end" style="width: 150px;">Jumlah (Juta Rp)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php
+                                        $programs = $programsBySector[$sec->id] ?? collect();
+                                    @endphp
+
+                                    @forelse($programs as $prog)
                                         @php
-                                            $programs = $programsBySector[$sec->id] ?? collect();
+                                            $progPegawai = $prog->children->sum(fn($c) => $c->expenditures->first()->pegawai_expense ?? 0);
+                                            $progBarjas  = $prog->children->sum(fn($c) => $c->expenditures->first()->barang_jasa_expense ?? 0);
+                                            $progModal   = $prog->children->sum(fn($c) => $c->expenditures->first()->modal_expense ?? 0);
+                                            $progTotal   = $prog->children->sum(fn($c) => $c->expenditures->first()->total_expense ?? 0);
+
+                                            if ($progTotal == 0 && $prog->expenditures->isNotEmpty()) {
+                                                $exp = $prog->expenditures->first();
+                                                $progPegawai = $exp->pegawai_expense;
+                                                $progBarjas  = $exp->barang_jasa_expense;
+                                                $progModal   = $exp->modal_expense;
+                                                $progTotal   = $exp->total_expense;
+                                            }
                                         @endphp
 
-                                        @forelse($programs as $prog)
+                                        <!-- Baris Program Utama (Level 1) -->
+                                        <tr class="table-primary fw-bold">
+                                            <td class="text-center"><span class="badge bg-primary">1</span></td>
+                                            <td class="font-monospace small">{{ $prog->code }}</td>
+                                            <td>{{ $prog->name }}</td>
+                                            <td class="text-end">{{ number_format($progPegawai, 0, ',', '.') }}</td>
+                                            <td class="text-end">{{ number_format($progBarjas, 0, ',', '.') }}</td>
+                                            <td class="text-end">{{ number_format($progModal, 0, ',', '.') }}</td>
+                                            <td class="text-end text-primary">{{ number_format($progTotal, 0, ',', '.') }}</td>
+                                        </tr>
+
+                                        <!-- Baris Sub-Kegiatan (Level 2) -->
+                                        @foreach($prog->children as $child)
                                             @php
-                                                $progPegawai = $prog->children->sum(fn($c) => $c->expenditures->first()->pegawai_expense ?? 0);
-                                                $progBarjas  = $prog->children->sum(fn($c) => $c->expenditures->first()->barang_jasa_expense ?? 0);
-                                                $progModal   = $prog->children->sum(fn($c) => $c->expenditures->first()->modal_expense ?? 0);
-                                                $progTotal   = $prog->children->sum(fn($c) => $c->expenditures->first()->total_expense ?? 0);
-
-                                                if ($progTotal == 0 && $prog->expenditures->isNotEmpty()) {
-                                                    $exp = $prog->expenditures->first();
-                                                    $progPegawai = $exp->pegawai_expense;
-                                                    $progBarjas  = $exp->barang_jasa_expense;
-                                                    $progModal   = $exp->modal_expense;
-                                                    $progTotal   = $exp->total_expense;
-                                                }
+                                                $cExp = $child->expenditures->first();
                                             @endphp
-
-                                            <!-- Baris Program Utama (Level 1) -->
-                                            <tr class="table-primary fw-bold">
-                                                <td class="text-center"><span class="badge bg-primary">1</span></td>
-                                                <td class="font-monospace small">{{ $prog->code }}</td>
-                                                <td>{{ $prog->name }}</td>
-                                                <td class="text-end">{{ number_format($progPegawai, 0, ',', '.') }}</td>
-                                                <td class="text-end">{{ number_format($progBarjas, 0, ',', '.') }}</td>
-                                                <td class="text-end">{{ number_format($progModal, 0, ',', '.') }}</td>
-                                                <td class="text-end text-primary">{{ number_format($progTotal, 0, ',', '.') }}</td>
-                                            </tr>
-
-                                            <!-- Baris Sub-Kegiatan (Level 2) -->
-                                            @foreach($prog->children as $child)
-                                                @php
-                                                    $cExp = $child->expenditures->first();
-                                                @endphp
-                                                <tr>
-                                                    <td class="text-center text-muted small">2</td>
-                                                    <td class="font-monospace small text-muted ps-3">{{ $child->code }}</td>
-                                                    <td class="ps-4">{{ $child->name }}</td>
-                                                    <td class="text-end text-muted">{{ number_format($cExp->pegawai_expense ?? 0, 0, ',', '.') }}</td>
-                                                    <td class="text-end text-muted">{{ number_format($cExp->barang_jasa_expense ?? 0, 0, ',', '.') }}</td>
-                                                    <td class="text-end text-muted">{{ number_format($cExp->modal_expense ?? 0, 0, ',', '.') }}</td>
-                                                    <td class="text-end fw-semibold">{{ number_format($cExp->total_expense ?? 0, 0, ',', '.') }}</td>
-                                                </tr>
-                                            @endforeach
-                                        @empty
                                             <tr>
-                                                <td colspan="7" class="text-center py-4 text-muted">
-                                                    Belum ada data program untuk urusan ini.
-                                                </td>
+                                                <td class="text-center text-muted small">2</td>
+                                                <td class="font-monospace small text-muted ps-3">{{ $child->code }}</td>
+                                                <td class="ps-4">{{ $child->name }}</td>
+                                                <td class="text-end text-muted">{{ number_format($cExp->pegawai_expense ?? 0, 0, ',', '.') }}</td>
+                                                <td class="text-end text-muted">{{ number_format($cExp->barang_jasa_expense ?? 0, 0, ',', '.') }}</td>
+                                                <td class="text-end text-muted">{{ number_format($cExp->modal_expense ?? 0, 0, ',', '.') }}</td>
+                                                <td class="text-end fw-semibold">{{ number_format($cExp->total_expense ?? 0, 0, ',', '.') }}</td>
                                             </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
+                                        @endforeach
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4 text-muted">
+                                                Belum ada data program untuk urusan ini.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
-                    @endforeach
-                </div>
+                    </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -479,10 +527,33 @@
 
 @section('scripts')
 @php
-     $mappedApbdTrend = collect($years)->map(fn($y) => (float) ($apbdTrend[$y] ?? 0))->values();
+    $mappedApbdTrend = collect($years)->map(fn($y) => (float) ($apbdTrend[$y] ?? 0))->values();
 @endphp
 <script>
-    // Pengalih Tab Urusan Program
+    // 1. Pengalih 4 Sub-Tampilan Utama Analisis APBD & Sinkronisasi Filter URL
+    document.querySelectorAll('.apbd-view-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.apbd-view-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.apbd-view-pane').forEach(p => p.classList.add('d-none'));
+
+            this.classList.add('active');
+            const viewKey = this.getAttribute('data-view');
+            const targetPane = document.querySelector(this.getAttribute('data-target'));
+            if (targetPane) {
+                targetPane.classList.remove('d-none');
+            }
+
+            // Simpan tab aktif ke input form & perbarui URL browser tanpa reload
+            const tabInput = document.getElementById('activeApbdTabInput');
+            if (tabInput) tabInput.value = viewKey;
+
+            const url = new URL(window.location);
+            url.searchParams.set('tab', viewKey);
+            window.history.replaceState({}, '', url);
+        });
+    });
+
+    // 2. Pengalih Tab 5 Urusan Program
     document.querySelectorAll('.custom-tab-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.custom-tab-btn').forEach(b => b.classList.remove('active'));
@@ -496,7 +567,7 @@
         });
     });
 
-    // Data Grafik Tren APBD
+    // 3. Data Grafik Tren APBD (Dipetakan presisi sesuai tahun 2025–2035)
     const years = JSON.parse('{!! json_encode($years) !!}');
     const apbdTrendValues = JSON.parse('{!! json_encode($mappedApbdTrend) !!}');
 
@@ -513,11 +584,12 @@
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: { legend: { display: false } }
         }
     });
 
-    // Data Grafik Komposisi Sektor (Diselaraskan dengan nama urusan resmi)
+    // 4. Data Grafik Komposisi Sektor (Diselaraskan dengan nama urusan resmi)
     const urusanMap = {
         'Kemiskinan Makro': 'Urusan Sosial (1.13)',
         'Pendidikan': 'Urusan Pendidikan (1.01)',
@@ -541,6 +613,7 @@
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'bottom' }
             }
