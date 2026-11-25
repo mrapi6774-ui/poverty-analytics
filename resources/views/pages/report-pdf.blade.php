@@ -147,56 +147,56 @@
                     <tr>
                         <th style="width: 80px;" class="text-center">Kode</th>
                         <th>Uraian Struktur APBD</th>
-                        <th class="text-end" style="width: 220px;">Anggaran (Juta Rp)</th>
+                        <th class="text-end" style="width: 220px;">Anggaran</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="fw-bold table-success bg-opacity-10">
                         <td class="text-center font-monospace">4</td>
                         <td>PENDAPATAN DAERAH</td>
-                        <td class="text-end">Rp {{ number_format($posturApbd['pendapatan'], 2, ',', '.') }} Jt</td>
+                        <td class="text-end">{{ number_format($posturApbd['pendapatan'], 2, ',', '.') }}</td>
                     </tr>
                     <tr class="fw-bold">
                         <td class="text-center font-monospace">5</td>
                         <td>BELANJA DAERAH (5.1 + 5.2)</td>
-                        <td class="text-end">Rp {{ number_format($posturApbd['total_belanja'], 2, ',', '.') }} Jt</td>
+                        <td class="text-end">{{ number_format($posturApbd['total_belanja'], 2, ',', '.') }}</td>
                     </tr>
                     <tr>
                         <td class="text-center font-monospace text-muted">5.1</td>
                         <td class="ps-4">Belanja Tidak Langsung</td>
-                        <td class="text-end">Rp {{ number_format($posturApbd['belanja_51'], 2, ',', '.') }} Jt</td>
+                        <td class="text-end">{{ number_format($posturApbd['belanja_51'], 2, ',', '.') }}</td>
                     </tr>
                     <tr>
                         <td class="text-center font-monospace text-muted">5.2</td>
                         <td class="ps-4">Belanja Langsung (5 Urusan Prioritas)</td>
-                        <td class="text-end">Rp {{ number_format($posturApbd['belanja_52'], 2, ',', '.') }} Jt</td>
+                        <td class="text-end">{{ number_format($posturApbd['belanja_52'], 2, ',', '.') }}</td>
                     </tr>
                     <tr class="fw-bold table-light">
                         <td class="text-center font-monospace">-</td>
                         <td>SURPLUS / (DEFISIT) ANGGARAN (4 - 5)</td>
                         <td class="text-end {{ $posturApbd['surplus_defisit'] < 0 ? 'text-danger' : 'text-success' }}">
-                            Rp {{ number_format($posturApbd['surplus_defisit'], 2, ',', '.') }} Jt
+                            {{ number_format($posturApbd['surplus_defisit'], 2, ',', '.') }}
                         </td>
                     </tr>
                     <tr>
                         <td class="text-center font-monospace text-muted">6.1</td>
                         <td class="ps-4">Penerimaan Pembiayaan Daerah</td>
-                        <td class="text-end">Rp {{ number_format($posturApbd['penerimaan_pembiayaan'], 2, ',', '.') }} Jt</td>
+                        <td class="text-end">{{ number_format($posturApbd['penerimaan_pembiayaan'], 2, ',', '.') }}</td>
                     </tr>
                     <tr>
                         <td class="text-center font-monospace text-muted">6.2</td>
                         <td class="ps-4">Pengeluaran Pembiayaan Daerah</td>
-                        <td class="text-end">Rp {{ number_format($posturApbd['pengeluaran_pembiayaan'], 2, ',', '.') }} Jt</td>
+                        <td class="text-end">{{ number_format($posturApbd['pengeluaran_pembiayaan'], 2, ',', '.') }}</td>
                     </tr>
                     <tr class="fw-bold">
                         <td class="text-center font-monospace">6</td>
                         <td>PEMBIAYAAN NETO (6.1 - 6.2)</td>
-                        <td class="text-end">Rp {{ number_format($posturApbd['pembiayaan_neto'], 2, ',', '.') }} Jt</td>
+                        <td class="text-end">{{ number_format($posturApbd['pembiayaan_neto'], 2, ',', '.') }}</td>
                     </tr>
                     <tr class="fw-bold table-primary">
                         <td class="text-center font-monospace">-</td>
                         <td>SISA LEBIH PEMBIAYAAN ANGGARAN (SILPA)</td>
-                        <td class="text-end text-primary">Rp {{ number_format($posturApbd['silpa'], 2, ',', '.') }} Jt</td>
+                        <td class="text-end text-primary">{{ number_format($posturApbd['silpa'], 2, ',', '.') }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -214,7 +214,7 @@
                     <tr>
                         <th style="width: 50px;" class="text-center">No</th>
                         <th>Urusan Belanja Langsung</th>
-                        <th class="text-end">Total Alokasi Anggaran</th>
+                        <th class="text-end">Total Alokasi</th>
                         <th class="text-end" style="width: 120px;">Proporsi (%)</th>
                     </tr>
                 </thead>
@@ -224,7 +224,7 @@
                         <tr>
                             <td class="text-center fw-bold">{{ $idx + 1 }}</td>
                             <td>{{ $urusanLabels[$row->sector->name] ?? $row->sector->name }}</td>
-                            <td class="text-end fw-semibold">Rp {{ number_format($row->total_expense, 2, ',', '.') }} Jt</td>
+                            <td class="text-end fw-semibold">{{ number_format($row->total_expense, 2, ',', '.') }}</td>
                             <td class="text-end">
                                 {{ $totalBudget > 0 ? number_format(($row->total_expense / $totalBudget) * 100, 1, ',', '.') : '0,0' }}%
                             </td>
@@ -238,7 +238,7 @@
                 <tfoot class="table-light fw-bold">
                     <tr>
                         <td colspan="2" class="text-end">TOTAL BELANJA LANGSUNG (5.2):</td>
-                        <td class="text-end text-primary">Rp {{ number_format($totalBudget, 2, ',', '.') }} Jt</td>
+                        <td class="text-end text-primary">{{ number_format($totalBudget, 2, ',', '.') }}</td>
                         <td class="text-end">100%</td>
                     </tr>
                 </tfoot>
@@ -251,16 +251,9 @@
         <div class="col-8">
             <div class="small text-muted">
                 * Dokumen laporan ini dihasilkan secara otomatis oleh Sistem Informasi <strong>Poverty Analytics</strong>.<br>
-                * Seluruh nominal anggaran disajikan dalam satuan Juta Rupiah sebagai bahan evaluasi perencanaan daerah.
+                * Data disajikan sebagai bahan evaluasi perencanaan pembangunan daerah.
             </div>
         </div>
-        <div class="col-4 text-center">
-            <div class="small fw-semibold">Pangkalpinang, {{ date('d F Y') }}</div>
-            <div class="small text-muted">Pengelola Data Analytics,</div>
-            <br><br><br>
-            <div class="fw-bold border-bottom d-inline-block px-4">( Tim Perencana Bappeda )</div>
-        </div>
-    </div>
 
 </div>
 

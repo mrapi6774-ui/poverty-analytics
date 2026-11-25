@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Analisis APBD & Efektivitas')
-@section('page-title', '💰 Analisis Pendapatan, Belanja APBD & Efektivitas Alokasi')
+@section('page-title', '💰 Analisis APBD & Efektivitas Alokasi')
 
 @section('content')
 @php
@@ -40,22 +40,22 @@
     </div>
 </div>
 
-<!-- Ringkasan Info APBD (Selalu Tampil Sebagai Patokan Cepat) -->
+<!-- Ringkasan Info APBD (Format Angka Standar 2 Desimal) -->
 <div class="row g-3 mb-4">
     <div class="col-md-6 col-lg-3">
         <div class="card shadow-sm border-0 border-start border-4 border-success bg-white h-100 p-3">
             <div class="text-muted small fw-semibold text-uppercase">Total Pendapatan (4)</div>
-            <div class="fs-4 fw-bold text-success mt-1">
-                Rp {{ number_format($totalPendapatan, 0, ',', '.') }} Jt
+            <div class="fs-4 fw-bold text-success mt-1" style="font-variant-numeric: tabular-nums;">
+                {{ number_format($totalPendapatan, 2, ',', '.') }}
             </div>
-            <small class="text-muted">{{ $selectedRegObj->name ?? '-' }} ({{ $selectedYear }})</small>
+            <small class="text-muted">{{ $selectedRegObj->name ?? '-' }} &bull; {{ $selectedYear }}</small>
         </div>
     </div>
     <div class="col-md-6 col-lg-3">
         <div class="card shadow-sm border-0 border-start border-4 border-warning bg-white h-100 p-3">
             <div class="text-muted small fw-semibold text-uppercase">Belanja Tidak Langsung (5.1)</div>
-            <div class="fs-4 fw-bold text-dark mt-1">
-                Rp {{ number_format($totalBelanja51, 0, ',', '.') }} Jt
+            <div class="fs-4 fw-bold text-dark mt-1" style="font-variant-numeric: tabular-nums;">
+                {{ number_format($totalBelanja51, 2, ',', '.') }}
             </div>
             <small class="text-muted">Pegawai, Subsidi, Hibah, Bansos</small>
         </div>
@@ -63,8 +63,8 @@
     <div class="col-md-6 col-lg-3">
         <div class="card shadow-sm border-0 border-start border-4 border-primary bg-white h-100 p-3">
             <div class="text-muted small fw-semibold text-uppercase">Belanja Langsung (5.2)</div>
-            <div class="fs-4 fw-bold text-primary mt-1">
-                Rp {{ number_format($totalBelanja52, 0, ',', '.') }} Jt
+            <div class="fs-4 fw-bold text-primary mt-1" style="font-variant-numeric: tabular-nums;">
+                {{ number_format($totalBelanja52, 2, ',', '.') }}
             </div>
             <small class="text-muted">Total {{ $sectorComposition->count() }} Urusan Program</small>
         </div>
@@ -72,10 +72,10 @@
     <div class="col-md-6 col-lg-3">
         <div class="card shadow-sm border-0 border-start border-4 {{ $surplusDefisit >= 0 ? 'border-info' : 'border-danger' }} bg-white h-100 p-3">
             <div class="text-muted small fw-semibold text-uppercase">Surplus / (Defisit) APBD</div>
-            <div class="fs-4 fw-bold {{ $surplusDefisit >= 0 ? 'text-info' : 'text-danger' }} mt-1">
-                {{ $surplusDefisit >= 0 ? '' : '-' }}Rp {{ number_format(abs($surplusDefisit), 0, ',', '.') }} Jt
+            <div class="fs-4 fw-bold {{ $surplusDefisit >= 0 ? 'text-info' : 'text-danger' }} mt-1" style="font-variant-numeric: tabular-nums;">
+                {{ number_format($surplusDefisit, 2, ',', '.') }}
             </div>
-            <small class="text-muted">Total Belanja: Rp {{ number_format($totalSemuaBelanja, 0, ',', '.') }} Jt</small>
+            <small class="text-muted">Total Belanja: {{ number_format($totalSemuaBelanja, 2, ',', '.') }}</small>
         </div>
     </div>
 </div>
@@ -127,7 +127,7 @@
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
             <span>📊 Ringkasan Postur APBD — {{ $selectedRegObj->name ?? '-' }} (Tahun {{ $selectedYear }})</span>
-            <span class="badge bg-dark">Format Standar Ringkasan APBD (Juta Rp)</span>
+            <span class="badge bg-dark">Format Standar Ringkasan APBD</span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
@@ -136,7 +136,7 @@
                         <tr>
                             <th style="width: 110px;">Kode</th>
                             <th>Uraian Akun APBD</th>
-                            <th class="text-end" style="width: 180px;">Nominal (Juta Rp)</th>
+                            <th class="text-end" style="width: 190px;">Nominal</th>
                             <th class="text-end" style="width: 130px;">Proporsi (%)</th>
                         </tr>
                     </thead>
@@ -305,7 +305,7 @@
                         <tr>
                             <th class="text-center" style="width: 60px;">No</th>
                             <th>Sektor Program</th>
-                            <th class="text-end">Total Belanja (Juta Rp)</th>
+                            <th class="text-end">Total Belanja</th>
                             <th>Indikator Utama Sektor</th>
                             <th class="text-center">Capaian Indikator</th>
                         </tr>
@@ -316,13 +316,13 @@
                                 <td class="fw-bold text-center">{{ $index + 1 }}</td>
                                 <td class="fw-semibold">{{ $rel['sector_name'] }}</td>
                                 <td class="text-end fw-bold text-primary">
-                                    Rp {{ number_format($rel['budget'], 0, ',', '.') }} Jt
+                                    {{ number_format($rel['budget'], 2, ',', '.') }}
                                 </td>
                                 <td>
                                     <small class="text-muted d-block">{{ $rel['indicator_name'] }}</small>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge bg-info text-dark px-3 py-2">{{ $rel['indicator_value'] }}</span>
+                                    <span class="badge bg-info text-dark px-3 py-2">{{ number_format((float) $rel['indicator_value'], 2, ',', '.') }}</span>
                                 </td>
                             </tr>
                         @empty
@@ -349,8 +349,8 @@
                         <tr>
                             <th class="text-center" style="width: 60px;">No</th>
                             <th>Sektor Belanja</th>
-                            <th class="text-end">Alokasi Anggaran (Juta Rp)</th>
-                            <th class="text-end">Perubahan Anggaran vs T-1</th>
+                            <th class="text-end">Alokasi Anggaran</th>
+                            <th class="text-end">Selisih vs T-1</th>
                             <th class="text-center">Dampak Kemiskinan (P0)</th>
                             <th class="text-center">Status Efektivitas</th>
                         </tr>
@@ -361,22 +361,22 @@
                                 <td class="fw-bold text-center">{{ $index + 1 }}</td>
                                 <td>{{ $row['sector_name'] }}</td>
                                 <td class="text-end fw-bold text-success">
-                                    Rp {{ number_format($row['current_exp'], 0, ',', '.') }} Jt
+                                    {{ number_format($row['current_exp'], 2, ',', '.') }}
                                 </td>
                                 <td class="text-end">
                                     @if($row['delta_exp'] > 0)
-                                        <span class="text-success"><i class="bi bi-arrow-up-right"></i> +Rp {{ number_format($row['delta_exp'], 0, ',', '.') }} Jt</span>
+                                        <span class="text-success"><i class="bi bi-arrow-up-right"></i> +{{ number_format($row['delta_exp'], 2, ',', '.') }}</span>
                                     @elseif($row['delta_exp'] < 0)
-                                        <span class="text-danger"><i class="bi bi-arrow-down-right"></i> -Rp {{ number_format(abs($row['delta_exp']), 0, ',', '.') }} Jt</span>
+                                        <span class="text-danger"><i class="bi bi-arrow-down-right"></i> -{{ number_format(abs($row['delta_exp']), 2, ',', '.') }}</span>
                                     @else
-                                        <span class="text-muted">Tetap</span>
+                                        <span class="text-muted">0,00</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if($row['delta_p0'] < 0)
-                                        <span class="badge bg-success"><i class="bi bi-graph-down-arrow"></i> Turun {{ number_format(abs($row['delta_p0']), 2) }}%</span>
+                                        <span class="badge bg-success"><i class="bi bi-graph-down-arrow"></i> Turun {{ number_format(abs($row['delta_p0']), 2, ',', '.') }}%</span>
                                     @elseif($row['delta_p0'] > 0)
-                                        <span class="badge bg-danger"><i class="bi bi-graph-up-arrow"></i> Naik {{ number_format($row['delta_p0'], 2) }}%</span>
+                                        <span class="badge bg-danger"><i class="bi bi-graph-up-arrow"></i> Naik {{ number_format($row['delta_p0'], 2, ',', '.') }}%</span>
                                     @else
                                         <span class="badge bg-secondary">Stagnan</span>
                                     @endif
@@ -454,10 +454,10 @@
                                         <th class="text-center" style="width: 60px;">Level</th>
                                         <th style="width: 170px;">Kode Rekening</th>
                                         <th>Nama Program / Sub-Kegiatan</th>
-                                        <th class="text-end" style="width: 140px;">B. Pegawai</th>
+                                        <th class="text-end" style="width: 150px;">B. Pegawai</th>
                                         <th class="text-end" style="width: 150px;">B. Barang Jasa</th>
-                                        <th class="text-end" style="width: 140px;">B. Modal</th>
-                                        <th class="text-end" style="width: 150px;">Jumlah (Juta Rp)</th>
+                                        <th class="text-end" style="width: 150px;">B. Modal</th>
+                                        <th class="text-end" style="width: 160px;">Jumlah</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -486,10 +486,10 @@
                                             <td class="text-center"><span class="badge bg-primary">1</span></td>
                                             <td class="font-monospace small">{{ $prog->code }}</td>
                                             <td>{{ $prog->name }}</td>
-                                            <td class="text-end">{{ number_format($progPegawai, 0, ',', '.') }}</td>
-                                            <td class="text-end">{{ number_format($progBarjas, 0, ',', '.') }}</td>
-                                            <td class="text-end">{{ number_format($progModal, 0, ',', '.') }}</td>
-                                            <td class="text-end text-primary">{{ number_format($progTotal, 0, ',', '.') }}</td>
+                                            <td class="text-end">{{ number_format($progPegawai, 2, ',', '.') }}</td>
+                                            <td class="text-end">{{ number_format($progBarjas, 2, ',', '.') }}</td>
+                                            <td class="text-end">{{ number_format($progModal, 2, ',', '.') }}</td>
+                                            <td class="text-end text-primary">{{ number_format($progTotal, 2, ',', '.') }}</td>
                                         </tr>
 
                                         <!-- Baris Sub-Kegiatan (Level 2) -->
@@ -501,10 +501,10 @@
                                                 <td class="text-center text-muted small">2</td>
                                                 <td class="font-monospace small text-muted ps-3">{{ $child->code }}</td>
                                                 <td class="ps-4">{{ $child->name }}</td>
-                                                <td class="text-end text-muted">{{ number_format($cExp->pegawai_expense ?? 0, 0, ',', '.') }}</td>
-                                                <td class="text-end text-muted">{{ number_format($cExp->barang_jasa_expense ?? 0, 0, ',', '.') }}</td>
-                                                <td class="text-end text-muted">{{ number_format($cExp->modal_expense ?? 0, 0, ',', '.') }}</td>
-                                                <td class="text-end fw-semibold">{{ number_format($cExp->total_expense ?? 0, 0, ',', '.') }}</td>
+                                                <td class="text-end text-muted">{{ number_format($cExp->pegawai_expense ?? 0, 2, ',', '.') }}</td>
+                                                <td class="text-end text-muted">{{ number_format($cExp->barang_jasa_expense ?? 0, 2, ',', '.') }}</td>
+                                                <td class="text-end text-muted">{{ number_format($cExp->modal_expense ?? 0, 2, ',', '.') }}</td>
+                                                <td class="text-end fw-semibold">{{ number_format($cExp->total_expense ?? 0, 2, ',', '.') }}</td>
                                             </tr>
                                         @endforeach
                                     @empty
@@ -543,7 +543,6 @@
                 targetPane.classList.remove('d-none');
             }
 
-            // Simpan tab aktif ke input form & perbarui URL browser tanpa reload
             const tabInput = document.getElementById('activeApbdTabInput');
             if (tabInput) tabInput.value = viewKey;
 
@@ -576,7 +575,7 @@
         data: {
             labels: years,
             datasets: [{
-                label: 'Total Belanja Langsung APBD (Juta Rp)',
+                label: 'Total Belanja Langsung APBD',
                 data: apbdTrendValues,
                 backgroundColor: '#198754',
                 borderRadius: 4
