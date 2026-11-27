@@ -47,7 +47,7 @@
     </div>
     <div class="col-lg-6">
         <div class="card shadow-sm h-100 border-0">
-            <div class="card-header bg-white fw-bold py-3">💰 Trend Total Anggaran APBD (Juta Rp)</div>
+            <div class="card-header bg-white fw-bold py-3">💰 Trend Total Anggaran APBD</div>
             <div class="card-body"><canvas id="apbdChart"></canvas></div>
         </div>
     </div>
@@ -106,7 +106,7 @@
         data: {
             labels: years,
             datasets: [{
-                label: 'Total APBD (Juta Rp)',
+                label: 'Total APBD',
                 data: apbdData.map(item => item.total_budget),
                 backgroundColor: '#198754'
             }]
